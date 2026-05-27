@@ -507,6 +507,82 @@ body[data-tool="hand"] #canvas:active { cursor: grabbing; }
   #sidebar { position: absolute; z-index: 20; height: 100%; box-shadow: var(--shadow-md); }
   #inspector { right: 8px; min-width: 200px; }
 }
+
+/* Sync bar (added) */
+#sync-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+#sync-bar .sync-label {
+  font-family: ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+#sync-bar input {
+  background: rgba(0,0,0,0.04);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+  outline: none;
+  width: 130px;
+  color: var(--text);
+}
+#sync-bar input:focus { border-color: var(--accent); background: white; }
+#sync-bar button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+#sync-bar button:hover { background: #4a7649; }
+#sync-bar button:disabled { background: rgba(0,0,0,0.1); color: var(--text-faint); cursor: not-allowed; }
+#sync-bar .sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: rgba(0,0,0,0.03);
+  border-radius: 10px;
+  font-size: 11.5px;
+}
+#sync-bar .indicator {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+#sync-bar .indicator.connecting { background: #d97706; animation: sync-pulse 1s infinite; }
+#sync-bar .indicator.connected { background: var(--accent); }
+#sync-bar .indicator.disconnected { background: #c1373d; }
+@keyframes sync-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+#sync-bar .sync-peers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(91,140,90,0.08);
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+}
+#sync-bar #sync-peers-count { color: var(--accent); font-weight: 600; }
+#sync-bar .sync-help { color: var(--text-faint); font-size: 11px; margin-left: auto; }
 </style>
 </head>
 <body data-tool="pen">
@@ -537,6 +613,14 @@ body[data-tool="hand"] #canvas:active { cursor: grabbing; }
         </button>
       </div>
     </header>
+    <div id="sync-bar">
+      <span class="sync-label">Sync</span>
+      <input id="sync-room" placeholder="room name" value="my-notes" maxlength="40">
+      <button id="sync-connect-btn" disabled>Connect</button>
+      <span class="sync-status"><span class="indicator"></span><span id="sync-status-text">Offline</span></span>
+      <span class="sync-peers"><span id="sync-peers-count">0</span> peers</span>
+      <span class="sync-help">Same room on each device → shared notes</span>
+    </div>
     <div id="inspector" class="hidden"></div>
     <div id="page-tabs"></div>
     <div id="page-settings-popover"></div>
@@ -556,6 +640,16 @@ body[data-tool="hand"] #canvas:active { cursor: grabbing; }
 </div>
 
 <input type="file" id="image-input" accept="image/*" style="display:none">
+
+<script type="module">
+// Load Y.js sync libraries from CDN, expose on window for the main script.
+// Same-origin WebSocket is preferred (so when served by the Pi/local server,
+// sync goes through that server with no CORS/mixed-content issues).
+import * as Y from 'https://esm.sh/yjs@13.6.18';
+import { WebsocketProvider } from 'https://esm.sh/y-websocket@1.5.4';
+window.QuillSync = { Y, WebsocketProvider };
+window.dispatchEvent(new Event('quill-sync-ready'));
+</script>
 
 <script>
 // ============================================================
@@ -622,18 +716,23 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // ============================================================
 const STORAGE_KEY = 'quill-state-v2';
 let saveTimer = null;
+function snapshotState() {
+  return {
+    folders: state.folders, notes: state.notes, pages: state.pages,
+    currentNoteId: state.currentNoteId, currentPageId: state.currentPageId,
+    customColors: state.customColors,
+  };
+}
 function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    const data = {
-      folders: state.folders, notes: state.notes, pages: state.pages,
-      currentNoteId: state.currentNoteId, currentPageId: state.currentPageId,
-      customColors: state.customColors,
-    };
+    const data = snapshotState();
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       flashStatus('Saved');
     } catch (e) { flashStatus('Save failed: ' + e.message); }
+    // Also push to sync if connected (defined below — see Sync section)
+    if (typeof pushToSync === 'function') pushToSync(data);
   }, 400);
 }
 function load() {
@@ -2163,6 +2262,183 @@ renderInspector();
 updateZoomDisplay();
 window.addEventListener('resize', resize);
 setTimeout(resize, 50);
+
+// ============================================================
+// Sync (Y.js + y-websocket — wired in once the module script loads)
+// ============================================================
+let syncDoc = null;
+let syncProvider = null;
+let syncMap = null;
+let isApplyingRemote = false;
+let initialSyncReady = false;
+
+function resolveWsUrl() {
+  if (location.protocol === 'file:' || !location.host) return 'wss://demos.yjs.dev/ws';
+  return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+}
+
+function setSyncStatus(s) {
+  const ind = document.querySelector('#sync-bar .indicator');
+  const txt = document.getElementById('sync-status-text');
+  const btn = document.getElementById('sync-connect-btn');
+  if (!ind || !txt || !btn) return;
+  ind.className = 'indicator';
+  if (s === 'connecting')        { ind.classList.add('connecting');   txt.textContent = 'Connecting…'; btn.textContent = 'Cancel'; }
+  else if (s === 'connected')    { ind.classList.add('connected');    txt.textContent = 'Synced';      btn.textContent = 'Disconnect'; }
+  else if (s === 'disconnected') { ind.classList.add('disconnected'); txt.textContent = 'Disconnected';btn.textContent = 'Connect'; }
+  else                           {                                    txt.textContent = 'Offline';    btn.textContent = 'Connect'; }
+}
+
+function pushToSync(data) {
+  if (!syncMap || isApplyingRemote || !initialSyncReady) return;
+  try {
+    syncDoc.transact(() => {
+      syncMap.set('state', JSON.stringify(data || snapshotState()));
+    });
+  } catch (e) { console.warn('Sync push failed:', e); }
+}
+
+function applyRemoteState() {
+  if (!syncMap) return;
+  const json = syncMap.get('state');
+  if (!json) return;
+  try {
+    const parsed = JSON.parse(json);
+    isApplyingRemote = true;
+    if (parsed.folders) state.folders = parsed.folders;
+    if (parsed.notes)   state.notes = parsed.notes;
+    if (parsed.pages)   state.pages = parsed.pages;
+    if (parsed.customColors) state.customColors = parsed.customColors;
+    if (parsed.currentNoteId && state.notes[parsed.currentNoteId]) {
+      state.currentNoteId = parsed.currentNoteId;
+    } else if (!state.notes[state.currentNoteId]) {
+      const first = state.folders[0];
+      if (first && first.noteIds[0]) state.currentNoteId = first.noteIds[0];
+    }
+    const note = state.notes[state.currentNoteId];
+    if (parsed.currentPageId && state.pages[parsed.currentPageId]) {
+      state.currentPageId = parsed.currentPageId;
+    } else if (note && note.pageIds[0]) {
+      state.currentPageId = note.pageIds[0];
+    }
+    isApplyingRemote = false;
+    // Re-render everything
+    if (note) document.getElementById('note-title-input').value = note.title || '';
+    renderSidebar();
+    renderPageTabs();
+    renderInspector();
+    render();
+    // Persist remote state to localStorage so it survives a reload offline
+    try { localStorage.setItem(STORAGE_KEY, json); } catch (_) {}
+    flashStatus('Synced');
+  } catch (e) {
+    isApplyingRemote = false;
+    console.error('Apply remote state failed:', e);
+  }
+}
+
+function syncConnect(room) {
+  syncDisconnect();
+  if (!window.QuillSync) { flashStatus('Sync library not ready'); return; }
+  const { Y, WebsocketProvider } = window.QuillSync;
+  const wsUrl = resolveWsUrl();
+  setSyncStatus('connecting');
+  initialSyncReady = false;
+
+  const localDoc = new Y.Doc();
+  const localProvider = new WebsocketProvider(wsUrl, room, localDoc);
+  const localMap = localDoc.getMap('quill-v2');
+
+  syncDoc = localDoc;
+  syncProvider = localProvider;
+  syncMap = localMap;
+
+  const isStillCurrent = () => syncProvider === localProvider;
+
+  localProvider.on('status', (e) => {
+    if (!isStillCurrent()) return;
+    setSyncStatus(e.status);
+  });
+  localProvider.on('connection-error', (e) => {
+    if (!isStillCurrent()) return;
+    console.warn('WS connection-error', e);
+  });
+
+  try {
+    localProvider.awareness.setLocalStateField('user', {
+      color: state.toolSettings.pen.color || '#5b8c5a',
+    });
+    localProvider.awareness.on('change', () => {
+      if (!isStillCurrent()) return;
+      try {
+        const states = localProvider.awareness.getStates();
+        document.getElementById('sync-peers-count').textContent = Math.max(0, states.size - 1);
+      } catch (_) {}
+    });
+  } catch (e) { console.warn('Awareness setup failed:', e); }
+
+  localMap.observe((evt, transaction) => {
+    if (!isStillCurrent()) return;
+    if (transaction.local) return;
+    applyRemoteState();
+  });
+
+  // After initial sync from the server, reconcile.
+  // If the room already has state, apply it. Otherwise push our local state to seed the room.
+  localProvider.once('sync', (isSynced) => {
+    if (!isStillCurrent()) return;
+    initialSyncReady = true;
+    if (localMap.get('state')) {
+      applyRemoteState();
+    } else {
+      pushToSync();
+    }
+  });
+  // Fallback in case 'sync' isn't emitted (older provider versions)
+  setTimeout(() => {
+    if (!isStillCurrent() || initialSyncReady) return;
+    initialSyncReady = true;
+    if (localMap.get('state')) applyRemoteState();
+    else pushToSync();
+  }, 2500);
+}
+
+function syncDisconnect() {
+  if (syncProvider) { try { syncProvider.destroy(); } catch (_) {} syncProvider = null; }
+  if (syncDoc)      { try { syncDoc.destroy(); }      catch (_) {} syncDoc = null; }
+  syncMap = null;
+  initialSyncReady = false;
+  setSyncStatus('idle');
+  const peers = document.getElementById('sync-peers-count');
+  if (peers) peers.textContent = '0';
+}
+
+function wireSyncUI() {
+  const btn = document.getElementById('sync-connect-btn');
+  const roomInput = document.getElementById('sync-room');
+  if (!btn || !roomInput) return;
+  btn.disabled = false;
+  btn.addEventListener('click', () => {
+    if (syncProvider) {
+      syncDisconnect();
+    } else {
+      const room = (roomInput.value || 'my-notes').trim();
+      syncConnect(room);
+    }
+  });
+  roomInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      btn.click();
+    }
+  });
+}
+
+if (window.QuillSync) {
+  wireSyncUI();
+} else {
+  window.addEventListener('quill-sync-ready', wireSyncUI, { once: true });
+}
 </script>
 </body>
 </html>
