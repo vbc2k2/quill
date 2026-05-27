@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quill — Final Product Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f5f3ee;
+  --bg-deep: #ecebe5;
+  --card: #ffffff;
+  --border: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.16);
+  --text: #1a1a1a;
+  --text-muted: #5e5e5e;
+  --text-faint: #999;
+  --accent: #5b8c5a;
+  --accent-light: rgba(91,140,90,0.1);
+  --accent-strong: #4a7649;
+  --code-bg: rgba(0,0,0,0.04);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  line-height: 1.55;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  padding: 60px 24px 100px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; }
+
+header.page {
+  margin-bottom: 60px;
+  max-width: 700px;
+}
+.kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+h1 {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(34px, 5vw, 52px);
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  margin-bottom: 18px;
+  color: #131313;
+}
+.dek {
+  font-size: 18px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  max-width: 580px;
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic;
+}
+
+h2 {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 500;
+  font-size: 28px;
+  letter-spacing: -0.015em;
+  margin-bottom: 8px;
+  color: #131313;
+}
+h2 .num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--accent);
+  vertical-align: 8px;
+  margin-right: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  letter-spacing: -0.005em;
+}
+section { margin-bottom: 72px; }
+.section-lead {
+  color: var(--text-muted);
+  margin-bottom: 36px;
+  font-size: 15.5px;
+  max-width: 640px;
+}
+
+.devices {
+  display: grid;
+  grid-template-columns: 1fr 60px 1fr 60px 1fr;
+  gap: 0;
+  align-items: stretch;
+  margin-top: 8px;
+}
+.device {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 26px 24px 28px;
+  display: flex;
+  flex-direction: column;
+}
+.device.server {
+  background: linear-gradient(180deg, #fafaf6 0%, var(--card) 100%);
+  border-color: var(--border-strong);
+}
+.device-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.device .label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 500;
+}
+.device h3 {
+  font-size: 17px;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+.device .device-sub {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  margin-bottom: 18px;
+}
+.device ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 13.5px;
+}
+.device li {
+  padding: 6px 0;
+  color: var(--text);
+  display: flex;
+  gap: 8px;
+  line-height: 1.4;
+}
+.device li::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-top: 3px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b8c5a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+}
+.device .device-meta {
+  margin-top: auto;
+  padding-top: 18px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  border-top: 1px dashed var(--border);
+  padding-top: 14px;
+  margin-top: 18px;
+}
+
+.connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  position: relative;
+}
+.connector .arrow {
+  width: 100%;
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(0,0,0,0.18) 0 5px,
+    transparent 5px 9px
+  );
+}
+.connector .arrow-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  background: var(--bg);
+  padding: 4px 6px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+.flow {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px 36px;
+}
+.flow ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  position: relative;
+}
+.flow ol::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  bottom: 14px;
+  width: 1px;
+  background: linear-gradient(180deg, var(--border) 0%, var(--accent) 30%, var(--accent) 70%, var(--border) 100%);
+  opacity: 0.4;
+}
+.flow li {
+  display: grid;
+  grid-template-columns: 36px 1fr 100px;
+  gap: 16px;
+  align-items: flex-start;
+}
+.flow .step-num {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 500;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+.flow .step-body { padding-top: 4px; }
+.flow .step-body h4 {
+  font-size: 14.5px;
+  margin-bottom: 3px;
+  letter-spacing: -0.005em;
+  font-weight: 600;
+}
+.flow .step-body p {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.flow .step-body code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--text);
+}
+.flow .step-time {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  text-align: right;
+  padding-top: 8px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.flow .total {
+  margin-top: 12px;
+  padding: 14px 18px;
+  background: var(--accent-light);
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--accent-strong);
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.flow .total .total-time {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.stack {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.stack-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  border-top: 1px solid var(--border);
+  padding: 18px 28px;
+  align-items: baseline;
+}
+.stack-row:first-child { border-top: none; }
+.stack-row .key {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 500;
+}
+.stack-row .val {
+  font-size: 14.5px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.stack-row .val .pick {
+  color: var(--accent);
+  font-weight: 500;
+}
+.stack-row .val .alt {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  margin-left: 8px;
+}
+
+.callout {
+  background: linear-gradient(180deg, #f9f7f0 0%, var(--bg-deep) 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px 32px;
+  font-family: 'Newsreader', Georgia, serif;
+}
+.callout p {
+  font-size: 18px;
+  line-height: 1.55;
+  font-style: italic;
+  color: var(--text);
+  letter-spacing: -0.005em;
+}
+.callout p strong {
+  font-style: normal;
+  color: var(--accent-strong);
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+}
+
+footer {
+  margin-top: 80px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+  font-size: 12.5px;
+  color: var(--text-faint);
+  display: flex;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+@media (max-width: 880px) {
+  .devices {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .connector {
+    transform: rotate(90deg);
+    height: 30px;
+  }
+  .connector .arrow-label { transform: translate(-50%, -50%) rotate(-90deg); }
+  .stack-row { grid-template-columns: 1fr; gap: 6px; }
+  .flow { padding: 24px 22px; }
+  .flow li { grid-template-columns: 28px 1fr; }
+  .flow .step-time { grid-column: 2; padding-top: 0; text-align: left; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="kicker">Project: Quill</p>
+  <h1>How the finished product works on iPad and Windows</h1>
+  <p class="dek">Same web codebase, two delivery shapes, one synced data store.</p>
+</header>
+
+<section>
+  <h2><span class="num">01</span>The three pieces</h2>
+  <p class="section-lead">Your codebase ships in three forms. Two of them are apps you interact with; one is a small server you host. All three speak the same data protocol so notes, folders, and pages stay identical everywhere.</p>
+
+  <div class="devices">
+    <article class="device">
+      <div class="device-head">
+        <span class="dot"></span>
+        <span class="label">iPad</span>
+      </div>
+      <h3>Installed as a PWA</h3>
+      <p class="device-sub">Open the URL in Safari. Tap Share → "Add to Home Screen". Now it lives on your home screen with a real app icon and fullscreen launch — no App Store, no Mac, no Apple Developer fee.</p>
+      <ul>
+        <li>Apple Pencil handwriting with pressure and tilt</li>
+        <li>Works offline; changes queue and sync on reconnect</li>
+        <li>Notes stored in IndexedDB locally</li>
+        <li>Looks and feels like a native app once installed</li>
+      </ul>
+      <div class="device-meta">delivered via your URL</div>
+    </article>
+
+    <div class="connector">
+      <div class="arrow"></div>
+      <span class="arrow-label">WebSocket</span>
+    </div>
+
+    <article class="device server">
+      <div class="device-head">
+        <span class="dot"></span>
+        <span class="label">Server</span>
+      </div>
+      <h3>Sync relay you host</h3>
+      <p class="device-sub">A tiny Node program (y-websocket-server). Runs on a VPS, a Raspberry Pi, or anything that can run Docker. Stateless or with persistence — your choice.</p>
+      <ul>
+        <li>Relays Y.js updates between connected clients</li>
+        <li>Helps late-joining devices catch up to current state</li>
+        <li>Optional Postgres backing for durable history</li>
+        <li>Auth layer you control (JWT, room invites, etc.)</li>
+      </ul>
+      <div class="device-meta">your domain · your control</div>
+    </article>
+
+    <div class="connector">
+      <div class="arrow"></div>
+      <span class="arrow-label">WebSocket</span>
+    </div>
+
+    <article class="device">
+      <div class="device-head">
+        <span class="dot"></span>
+        <span class="label">Windows</span>
+      </div>
+      <h3>Native app via Tauri</h3>
+      <p class="device-sub">The same web app, wrapped in a Tauri 2 native shell. Compiled into a real Windows .exe installer. Shows up in Start menu, taskbar, system tray — like any native program.</p>
+      <ul>
+        <li>Type fluidly with a real rich-text editor (Tiptap)</li>
+        <li>View handwritten notes from your iPad as you make them</li>
+        <li>Native menu bar, file system, drag-and-drop, OS notifications</li>
+        <li>Built on Windows (no Mac needed); Linux build follows</li>
+      </ul>
+      <div class="device-meta">.exe installer</div>
+    </article>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>What happens when you draw a stroke on iPad</h2>
+  <p class="section-lead">Sketch of the data path from Apple Pencil tip to the Windows screen, with realistic timings for a healthy network.</p>
+
+  <div class="flow">
+    <ol>
+      <li>
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Apple Pencil draws</h4>
+          <p>Safari fires <code>pointerdown</code>/<code>pointermove</code> events with position, pressure, and tilt. We capture coalesced events so no points are dropped.</p>
+        </div>
+        <div class="step-time">~0ms</div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Ink renders locally</h4>
+          <p>The stroke draws to canvas immediately via <code>perfect-freehand</code> — outline polygon with pressure-based width. Feels like actual ink to the user.</p>
+        </div>
+        <div class="step-time">~10ms</div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Stroke saved to IndexedDB</h4>
+          <p>On stroke completion, the local Y.js document gets <code>ystrokes.push([stroke])</code>. Persisted via <code>y-indexeddb</code> — survives reload, works offline.</p>
+        </div>
+        <div class="step-time">~5ms</div>
+      </li>
+      <li>
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Y.js sends the update over WebSocket</h4>
+          <p>The diff is encoded as a tiny binary payload (usually a few hundred bytes per stroke) and sent to your sync server.</p>
+        </div>
+        <div class="step-time">~50–150ms</div>
+      </li>
+      <li>
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h4>Server broadcasts to other peers</h4>
+          <p>y-websocket-server forwards the update to every connected device subscribed to the same document.</p>
+        </div>
+        <div class="step-time">~10ms</div>
+      </li>
+      <li>
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <h4>Windows receives and applies</h4>
+          <p>Tauri app's embedded Y.js applies the update. The <code>ystrokes.observe()</code> callback fires; the canvas re-renders with the new stroke.</p>
+        </div>
+        <div class="step-time">~30ms</div>
+      </li>
+    </ol>
+    <div class="total">
+      <span>Total pen-to-Windows-screen</span>
+      <span class="total-time">~100–500ms typical</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">03</span>Stack at a glance</h2>
+  <p class="section-lead">One web codebase. Two delivery shapes. One sync server. Open-source from top to bottom.</p>
+
+  <div class="stack">
+    <div class="stack-row">
+      <span class="key">UI framework</span>
+      <span class="val"><span class="pick">React</span> or <span class="pick">Svelte</span><span class="alt">final choice during Phase 1 — both work</span></span>
+    </div>
+    <div class="stack-row">
+      <span class="key">Ink rendering</span>
+      <span class="val"><span class="pick">perfect-freehand</span> (Steve Ruiz, MIT)<span class="alt">drop-in for our prototype's outline algorithm</span></span>
+    </div>
+    <div class="stack-row">
+      <span class="key">Rich text editor</span>
+      <span class="val"><span class="pick">Tiptap</span> or <span class="pick">Lexical</span><span class="alt">for typed content alongside ink</span></span>
+    </div>
+    <div class="stack-row">
+      <span class="key">Sync data model</span>
+      <span class="val"><span class="pick">Y.js</span> (CRDT) — Y.Array of strokes per page, Y.Map for metadata</span>
+    </div>
+    <div class="stack-row">
+      <span class="key">Sync transport</span>
+      <span class="val"><span class="pick">y-websocket</span> — connects browser to your server over WebSocket</span>
+    </div>
+    <div class="stack-row">
+      <span class="key">Sync server</span>
+      <span class="val"><span class="pick">y-websocket-server</span> in Node<span class="alt">~50 lines of config, optional Postgres for history</span></span>
+    </div>
+    <div class="stack-row">
+      <span class="key">Local persistence</span>
+      <span class="val"><span class="pick">y-indexeddb</span> on web, Tauri file system on desktop</span>
+    </div>
+    <div class="stack-row">
+      <span class="key">iPad delivery</span>
+      <span class="val"><span class="pick">PWA</span> — open URL in Safari, "Add to Home Screen", done</span>
+    </div>
+    <div class="stack-row">
+      <span class="key">Desktop delivery</span>
+      <span class="val"><span class="pick">Tauri 2</span> — wraps the web app into a native .exe / Linux binary</span>
+    </div>
+    <div class="stack-row">
+      <span class="key">Hosting</span>
+      <span class="val">Static web app on any CDN; sync server on any VPS — all yours to control</span>
+    </div>
+    <div class="stack-row">
+      <span class="key">License</span>
+      <span class="val"><span class="pick">AGPL-3.0</span> recommended for FOSS<span class="alt">forces service operators to share modifications</span></span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="callout">
+    <p><strong>The result:</strong> on iPad, you tap an app icon on your home screen and write with the Pencil. On Windows, you double-click an icon on the desktop and type around the strokes that just appeared. Same notes, same folders, same data — flowing through a server you control, with no App Store, no Mac, and no platform fees.</p>
+  </div>
+</section>
+
+<footer>
+  <span>Quill — sketch · 2026</span>
+  <span>open source · self-hostable · cross-platform</span>
+</footer>
+
+</div>
+</body>
+</html>

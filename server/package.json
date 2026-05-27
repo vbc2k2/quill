@@ -1,0 +1,20 @@
+{
+  "name": "quill-sync-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hostable y-websocket sync server for Quill. Serves the prototype HTML alongside the sync endpoint on the same port.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:dev": "PORT=1234 HOST=0.0.0.0 node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "y-websocket": "^1.5.4",
+    "yjs": "^13.6.18"
+  },
+  "license": "MIT"
+}

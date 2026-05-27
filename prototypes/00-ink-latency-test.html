@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Ink Latency Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #fafaf9;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      overscroll-behavior: none;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+    }
+    .hud {
+      position: fixed;
+      top: max(env(safe-area-inset-top), 16px);
+      left: 16px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 10px;
+      font-size: 12px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      color: #333;
+      pointer-events: none;
+      line-height: 1.55;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+      letter-spacing: 0.02em;
+      min-width: 180px;
+    }
+    .hud .label { color: #999; display: inline-block; width: 70px; }
+    .hud .val { color: #1a1a1a; font-weight: 500; }
+    .toolbar {
+      position: fixed;
+      top: max(env(safe-area-inset-top), 16px);
+      right: 16px;
+      display: flex;
+      gap: 8px;
+    }
+    button {
+      background: white;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      padding: 9px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      color: #1a1a1a;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      font-weight: 500;
+    }
+    button:active { transform: scale(0.96); background: #f5f5f4; }
+    .splash {
+      position: fixed;
+      bottom: max(env(safe-area-inset-bottom), 24px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      background: rgba(26, 26, 26, 0.92);
+      color: white;
+      border-radius: 24px;
+      font-size: 13px;
+      pointer-events: none;
+      backdrop-filter: blur(12px);
+      letter-spacing: 0.01em;
+      transition: opacity 0.5s;
+      white-space: nowrap;
+    }
+    .splash.hide { opacity: 0; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="hud">
+    <div><span class="label">fps</span><span class="val" id="fps">—</span></div>
+    <div><span class="label">strokes</span><span class="val" id="strokes">0</span></div>
+    <div><span class="label">points</span><span class="val" id="points">0</span></div>
+    <div><span class="label">input lag</span><span class="val" id="lag">—</span></div>
+    <div><span class="label">last evt</span><span class="val" id="pen">no input yet</span></div>
+  </div>
+  <div class="toolbar">
+    <button id="clear">Clear</button>
+  </div>
+  <div class="splash" id="splash">Draw with Apple Pencil — palm and finger touches are ignored</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+const splash = document.getElementById('splash');
+
+const hud = {
+  fps: document.getElementById('fps'),
+  strokes: document.getElementById('strokes'),
+  points: document.getElementById('points'),
+  lag: document.getElementById('lag'),
+  pen: document.getElementById('pen'),
+};
+
+let dpr = window.devicePixelRatio || 1;
+let strokes = [];
+let currentStroke = null;
+let totalPoints = 0;
+let lagSamples = [];
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(window.innerWidth * dpr);
+  canvas.height = Math.round(window.innerHeight * dpr);
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  redrawAll();
+}
+window.addEventListener('resize', resize);
+resize();
+
+function drawSegment(a, b, color) {
+  const w = 1.2 + ((a.p + b.p) / 2) * 4.5;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = w;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+}
+
+function drawStroke(stroke) {
+  const pts = stroke.points;
+  if (pts.length === 1) {
+    const w = 1.2 + pts[0].p * 4.5;
+    ctx.fillStyle = stroke.color;
+    ctx.beginPath();
+    ctx.arc(pts[0].x, pts[0].y, w / 2, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  for (let i = 1; i < pts.length; i++) {
+    drawSegment(pts[i - 1], pts[i], stroke.color);
+  }
+}
+
+function redrawAll() {
+  ctx.fillStyle = '#fafaf9';
+  ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+  for (const s of strokes) drawStroke(s);
+  if (currentStroke) drawStroke(currentStroke);
+}
+
+function describe(e) {
+  const pt = e.pointerType || 'mouse';
+  const pr = (e.pressure || 0).toFixed(2);
+  const tx = Math.round(e.tiltX || 0);
+  const ty = Math.round(e.tiltY || 0);
+  return `${pt} p${pr} t${tx}/${ty}`;
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') return;
+  canvas.setPointerCapture(e.pointerId);
+  e.preventDefault();
+  splash.classList.add('hide');
+  currentStroke = {
+    color: '#111',
+    points: [{ x: e.offsetX, y: e.offsetY, p: e.pressure || 0.5, t: e.timeStamp }],
+  };
+  totalPoints++;
+  hud.pen.textContent = describe(e);
+  hud.points.textContent = totalPoints;
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  if (!currentStroke) return;
+  if (e.pointerType === 'touch') return;
+  e.preventDefault();
+
+  const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  const pts = currentStroke.points;
+
+  for (const ce of events) {
+    const np = {
+      x: ce.offsetX,
+      y: ce.offsetY,
+      p: ce.pressure || 0.5,
+      t: ce.timeStamp,
+    };
+    const prev = pts[pts.length - 1];
+    drawSegment(prev, np, currentStroke.color);
+    pts.push(np);
+    totalPoints++;
+  }
+
+  const lag = performance.now() - e.timeStamp;
+  lagSamples.push(lag);
+  if (lagSamples.length > 30) lagSamples.shift();
+
+  hud.pen.textContent = describe(e);
+  hud.points.textContent = totalPoints;
+});
+
+function endStroke(e) {
+  if (!currentStroke) return;
+  if (e.pointerType === 'touch') return;
+  strokes.push(currentStroke);
+  currentStroke = null;
+  hud.strokes.textContent = strokes.length;
+}
+canvas.addEventListener('pointerup', endStroke);
+canvas.addEventListener('pointercancel', endStroke);
+canvas.addEventListener('pointerleave', endStroke);
+
+document.getElementById('clear').addEventListener('click', () => {
+  strokes = [];
+  totalPoints = 0;
+  currentStroke = null;
+  lagSamples = [];
+  hud.strokes.textContent = '0';
+  hud.points.textContent = '0';
+  hud.lag.textContent = '—';
+  ctx.fillStyle = '#fafaf9';
+  ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+});
+
+let frameCount = 0;
+let lastTick = performance.now();
+function tick() {
+  frameCount++;
+  const now = performance.now();
+  if (now - lastTick >= 500) {
+    const fps = Math.round((frameCount * 1000) / (now - lastTick));
+    hud.fps.textContent = fps;
+    frameCount = 0;
+    lastTick = now;
+    if (lagSamples.length > 0) {
+      const avg = lagSamples.reduce((a, b) => a + b, 0) / lagSamples.length;
+      hud.lag.textContent = avg.toFixed(1) + 'ms';
+    }
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+window.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+</body>
+</html>

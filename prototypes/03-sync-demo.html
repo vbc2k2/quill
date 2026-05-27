@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Quill — Sync Demo</title>
+<style>
+:root {
+  --bg: #f5f3ee;
+  --canvas: #fdfcf7;
+  --surface: #ffffff;
+  --border: rgba(0,0,0,0.08);
+  --text: #1a1a1a;
+  --text-muted: #6b6b6b;
+  --text-faint: #999;
+  --accent: #5b8c5a;
+  --accent-light: rgba(91,140,90,0.13);
+  --warn: #c1873d;
+  --error: #c1373d;
+  --good: #5b8c5a;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  height: 100%; width: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  color: var(--text);
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  font-size: 14px;
+}
+button, input { font-family: inherit; }
+
+#topbar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.brand {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.brand .sub { color: var(--text-faint); font-weight: 500; }
+
+.room-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.04);
+  border-radius: 8px;
+  padding: 3px 3px 3px 10px;
+}
+.room-section label {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.room-section input {
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 4px 6px;
+  font-size: 13px;
+  width: 130px;
+  color: var(--text);
+}
+.btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+.btn:hover { background: rgba(0,0,0,0.04); }
+.btn.primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.btn.primary:hover { background: #4a7649; }
+.btn.danger {
+  background: #fef1f1;
+  color: var(--error);
+  border-color: #f5c1c4;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  background: rgba(0,0,0,0.04);
+  border-radius: 12px;
+}
+.indicator {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+.indicator.connecting { background: var(--warn); animation: pulse 1s infinite; }
+.indicator.connected { background: var(--good); }
+.indicator.disconnected { background: var(--error); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.peers-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  background: rgba(91,140,90,0.08);
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+}
+#peers-count { font-weight: 600; color: var(--accent); }
+
+.spacer { flex: 1; }
+
+.color-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 4px;
+  background: rgba(0,0,0,0.04);
+  border-radius: 12px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.my-color {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+
+#canvas-container {
+  position: relative;
+  flex: 1;
+  background: var(--canvas);
+  overflow: hidden;
+}
+#canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  touch-action: none;
+  background: var(--canvas);
+  cursor: crosshair;
+}
+
+#info-card {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 28px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  max-width: 420px;
+  text-align: center;
+  z-index: 5;
+  pointer-events: auto;
+}
+#info-card h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+#info-card p {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-bottom: 10px;
+}
+#info-card .room-hint {
+  display: inline-block;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-weight: 600;
+}
+#info-card button {
+  margin-top: 14px;
+}
+#info-card.hidden { display: none; }
+
+#diagnostics {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  background: rgba(255,255,255,0.85);
+  padding: 4px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+#main-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+@media (max-width: 700px) {
+  #topbar { gap: 6px; padding: 8px 10px; }
+  .brand { font-size: 13.5px; }
+  .room-section input { width: 90px; font-size: 12px; }
+  .status-pill, .peers-pill, .color-pill { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+<div id="main-wrap">
+  <header id="topbar">
+    <span class="brand">Quill <span class="sub">/ Sync Demo</span></span>
+    <div class="room-section">
+      <label>Room</label>
+      <input id="room-input" value="quill-demo" maxlength="40">
+    </div>
+    <button class="btn primary" id="connect-btn">Connect</button>
+    <span class="status-pill"><span class="indicator" id="indicator"></span><span id="status">Idle</span></span>
+    <span class="peers-pill">peers: <span id="peers-count">0</span></span>
+    <span class="color-pill"><span class="my-color" id="my-color"></span>your pen</span>
+    <div class="spacer"></div>
+    <button class="btn danger" id="clear-btn">Clear room</button>
+  </header>
+  <div id="canvas-container">
+    <canvas id="canvas"></canvas>
+    <div id="info-card">
+      <h2>Two-device sync demo</h2>
+      <p>Open this same URL on a second device — for example your <b>iPad</b> and your <b>Windows desktop</b>.</p>
+      <p>Both devices should use the same room name. The default room is <span class="room-hint">quill-demo</span> — change it if you want privacy.</p>
+      <p>Anything one device draws appears on the other in real time, using Y.js CRDT + WebSocket transport.</p>
+      <button class="btn primary" id="info-dismiss">Got it — start drawing</button>
+    </div>
+    <div id="diagnostics">—</div>
+  </div>
+</div>
+
+<script type="module">
+import * as Y from 'https://esm.sh/yjs@13.6.18';
+import { WebsocketProvider } from 'https://esm.sh/y-websocket@1.5.4';
+import { WebrtcProvider } from 'https://esm.sh/y-webrtc@10.3.0';
+
+// Detect iframe sandboxing — parent CSP often blocks our WebSocket
+const isInIframe = (() => { try { return window.self !== window.top; } catch (_) { return true; } })();
+if (isInIframe) {
+  const warn = document.createElement('div');
+  warn.style.cssText = 'background:linear-gradient(180deg,#fff7e1 0%,#fef0c8 100%);color:#7a4a0a;padding:10px 14px;font-size:12.5px;text-align:center;font-weight:500;border-bottom:1px solid #e9d29a;letter-spacing:0.01em;line-height:1.4';
+  warn.innerHTML = '⚠ You\'re viewing this in an iframe. Long-lived WebSocket connections are usually blocked here, which causes flickering. <a href="' + location.href + '" target="_blank" rel="noopener" style="color:#5b8c5a;font-weight:600;text-decoration:underline">Open in a new tab</a> for stable sync.';
+  document.body.insertBefore(warn, document.body.firstChild);
+}
+
+const colors = ['#1a1a1a', '#1e6fea', '#e23636', '#22a559', '#a855f7', '#f59e0b', '#ec4899', '#06b6d4', '#84cc16'];
+const myClientId = Math.random().toString(36).slice(2, 9);
+const myColor = colors[Math.floor(Math.random() * colors.length)];
+document.getElementById('my-color').style.background = myColor;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+let dpr = 1;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  render();
+}
+window.addEventListener('resize', resize);
+
+// ====== State ======
+let ydoc = null;
+let provider = null;          // websocket provider (also acts as primary identity for isStillCurrent)
+let webrtcProviderRef = null; // webrtc provider running in parallel for redundancy
+let ystrokes = null;
+let connected = false;
+let activeStroke = null;
+let strokesReceived = 0;
+let strokesSent = 0;
+let wsState = 'idle';         // 'connecting' | 'connected' | 'disconnected' | 'idle'
+let webrtcPeers = 0;          // count of webrtc peers
+let pendingDisconnectStatus = null; // debounce 'disconnected' UI
+
+// ====== Yjs connection ======
+function connect(room) {
+  disconnect();
+  setStatus('connecting');
+
+  // Capture as locals — listeners must NOT read module-level provider/ystrokes.
+  const localDoc = new Y.Doc();
+  // Pick WebSocket URL based on how this page is loaded:
+  // - Served by the bundled server (http://localhost:1234, http://192.168.x.x:1234)
+  //   → connect to the same origin (no CORS, no mixed-content issues)
+  // - Opened standalone via file:// → fall back to the public Y.js demo server
+  // - Override with ?server=ws://other-host:1234
+  const urlParams = new URLSearchParams(location.search);
+  const wsUrl = urlParams.get('server') ||
+    (location.protocol === 'file:' || !location.host
+      ? 'wss://demos.yjs.dev/ws'
+      : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
+  const localWs = new WebsocketProvider(wsUrl, room, localDoc);
+  // Run y-webrtc in parallel as a redundant transport — peer-to-peer.
+  // If the WebSocket keeps dropping, peers can still sync directly via WebRTC.
+  let localWebrtc = null;
+  try {
+    localWebrtc = new WebrtcProvider(room, localDoc, {
+      signaling: ['wss://signaling.yjs.dev'],
+      maxConns: 20,
+    });
+  } catch (e) {
+    console.warn('WebRTC provider failed to initialize:', e);
+  }
+  const localYstrokes = localDoc.getArray('strokes');
+  const localAwareness = localWs.awareness;
+
+  ydoc = localDoc;
+  provider = localWs;
+  webrtcProviderRef = localWebrtc;
+  ystrokes = localYstrokes;
+
+  const isStillCurrent = () => provider === localWs;
+
+  function recomputeStatus() {
+    if (wsState === 'connected' || webrtcPeers > 0) {
+      connected = true;
+      setStatus('connected');
+    } else if (wsState === 'connecting') {
+      setStatus('connecting');
+    } else {
+      connected = false;
+      setStatus('disconnected');
+    }
+  }
+
+  localWs.on('status', (e) => {
+    if (!isStillCurrent()) return;
+    wsState = e.status;
+    recomputeStatus();
+    updateDiagnostics();
+  });
+  localWs.on('connection-error', (e) => {
+    if (!isStillCurrent()) return;
+    console.warn('WS connection-error', e);
+    updateDiagnostics();
+  });
+
+  if (localWebrtc) {
+    localWebrtc.on('peers', (e) => {
+      if (!isStillCurrent()) return;
+      webrtcPeers = (e.webrtcPeers ? e.webrtcPeers.length : 0) +
+                    (e.bcPeers ? e.bcPeers.length : 0);
+      recomputeStatus();
+      updateDiagnostics();
+    });
+  }
+
+  localAwareness.setLocalStateField('user', { color: myColor, id: myClientId });
+  localAwareness.on('change', () => {
+    if (!isStillCurrent()) return;
+    try {
+      const states = localAwareness.getStates();
+      document.getElementById('peers-count').textContent = Math.max(0, states.size - 1);
+    } catch (_) { /* awareness mid-teardown, ignore */ }
+  });
+
+  localYstrokes.observe((evt) => {
+    if (!isStillCurrent()) return;
+    let received = 0;
+    for (const change of evt.changes.delta) {
+      if (change.insert) received += change.insert.length;
+    }
+    if (received > 0) {
+      const added = evt.changes.added;
+      let remote = 0;
+      for (const item of added) {
+        const content = item.content && item.content.getContent && item.content.getContent();
+        if (content) {
+          for (const c of content) {
+            if (c && c.clientId && c.clientId !== myClientId) remote += 1;
+          }
+        }
+      }
+      strokesReceived += remote;
+    }
+    render();
+    updateDiagnostics();
+  });
+
+  render();
+  updateDiagnostics();
+}
+
+function disconnect() {
+  if (webrtcProviderRef) { try { webrtcProviderRef.destroy(); } catch(_) {} webrtcProviderRef = null; }
+  if (provider) { try { provider.destroy(); } catch(_) {} provider = null; }
+  if (ydoc) { try { ydoc.destroy(); } catch(_) {} ydoc = null; }
+  ystrokes = null;
+  connected = false;
+  wsState = 'idle';
+  webrtcPeers = 0;
+  if (pendingDisconnectStatus) { clearTimeout(pendingDisconnectStatus); pendingDisconnectStatus = null; }
+  setStatus('idle');
+  document.getElementById('peers-count').textContent = '0';
+  strokesReceived = 0;
+  strokesSent = 0;
+  render();
+  updateDiagnostics();
+}
+
+function setStatus(s) {
+  // Debounce 'disconnected' — y-websocket auto-reconnects rapidly on a flaky
+  // server. Showing 'disconnected' immediately causes visible UI flicker even
+  // though Y.js's queue keeps state correct underneath. Wait 4s before
+  // believing it's really down.
+  if (pendingDisconnectStatus) { clearTimeout(pendingDisconnectStatus); pendingDisconnectStatus = null; }
+  if (s === 'disconnected') {
+    pendingDisconnectStatus = setTimeout(() => { pendingDisconnectStatus = null; applyStatus('disconnected'); }, 4000);
+    return;
+  }
+  applyStatus(s);
+}
+function applyStatus(s) {
+  const ind = document.getElementById('indicator');
+  const txt = document.getElementById('status');
+  const btn = document.getElementById('connect-btn');
+  ind.className = 'indicator';
+  if (s === 'connecting') {
+    ind.classList.add('connecting');
+    txt.textContent = 'Connecting…';
+    btn.textContent = 'Cancel';
+  } else if (s === 'connected') {
+    ind.classList.add('connected');
+    txt.textContent = 'Connected';
+    btn.textContent = 'Disconnect';
+  } else if (s === 'disconnected') {
+    ind.classList.add('disconnected');
+    txt.textContent = 'Disconnected';
+    btn.textContent = 'Connect';
+  } else {
+    txt.textContent = 'Idle';
+    btn.textContent = 'Connect';
+  }
+}
+
+function updateDiagnostics() {
+  const room = document.getElementById('room-input').value;
+  const wsTag = wsState === 'connected' ? 'ws ✓' :
+                wsState === 'connecting' ? 'ws …' :
+                wsState === 'disconnected' ? 'ws ✕' : 'ws –';
+  const rtcTag = webrtcProviderRef ? `rtc ${webrtcPeers}` : 'rtc –';
+  document.getElementById('diagnostics').textContent =
+    `room: ${room} · ${wsTag} · ${rtcTag} · sent: ${strokesSent} · received: ${strokesReceived}`;
+}
+
+// ====== Canvas drawing ======
+function render() {
+  ctx.fillStyle = '#fdfcf7';
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+  // subtle ruled background
+  ctx.strokeStyle = 'rgba(180,170,150,0.18)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let y = 30; y < canvas.clientHeight; y += 32) {
+    ctx.moveTo(0, y + 0.5);
+    ctx.lineTo(canvas.clientWidth, y + 0.5);
+  }
+  ctx.stroke();
+
+  if (ystrokes) {
+    const all = ystrokes.toArray();
+    for (const s of all) drawStroke(s);
+  }
+  if (activeStroke) drawStroke(activeStroke);
+}
+
+function drawStroke(s) {
+  if (!s || !s.points || s.points.length === 0) return;
+  ctx.strokeStyle = s.color || '#111';
+  ctx.lineWidth = s.width || 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  if (s.points.length === 1) {
+    ctx.fillStyle = s.color || '#111';
+    ctx.arc(s.points[0].x, s.points[0].y, (s.width || 2.5) / 2, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.moveTo(s.points[0].x, s.points[0].y);
+    for (let i = 1; i < s.points.length; i++) {
+      ctx.lineTo(s.points[i].x, s.points[i].y);
+    }
+    ctx.stroke();
+  }
+}
+
+// ====== Pointer input ======
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') return;
+  e.preventDefault();
+  try { canvas.setPointerCapture(e.pointerId); } catch(_){}
+  const rect = canvas.getBoundingClientRect();
+  activeStroke = {
+    id: myClientId + '-' + Date.now(),
+    clientId: myClientId,
+    color: myColor,
+    width: 2.5,
+    points: [{ x: e.clientX - rect.left, y: e.clientY - rect.top }],
+    ts: Date.now(),
+  };
+  render();
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  if (!activeStroke) return;
+  if (e.pointerType === 'touch') return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const ce of events) {
+    activeStroke.points.push({
+      x: ce.clientX - rect.left,
+      y: ce.clientY - rect.top,
+    });
+  }
+  render();
+});
+
+function endStroke() {
+  if (!activeStroke) return;
+  if (ystrokes && activeStroke.points.length > 0) {
+    ystrokes.push([activeStroke]);
+    strokesSent += 1;
+    updateDiagnostics();
+  } else if (!ystrokes && activeStroke.points.length > 0) {
+    // not connected — keep local for visual feedback
+  }
+  activeStroke = null;
+  render();
+}
+canvas.addEventListener('pointerup', endStroke);
+canvas.addEventListener('pointercancel', endStroke);
+canvas.addEventListener('pointerleave', endStroke);
+
+// Prevent native gestures on canvas
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('touchmove', e => {
+  if (e.target.closest('#canvas-container')) e.preventDefault();
+}, { passive: false });
+
+// ====== UI handlers ======
+document.getElementById('connect-btn').addEventListener('click', () => {
+  if (connected || provider) {
+    disconnect();
+  } else {
+    const r = document.getElementById('room-input').value.trim() || 'quill-demo';
+    connect(r);
+    document.getElementById('info-card').classList.add('hidden');
+  }
+});
+document.getElementById('info-dismiss').addEventListener('click', () => {
+  document.getElementById('info-card').classList.add('hidden');
+  if (!connected && !provider) {
+    const r = document.getElementById('room-input').value.trim() || 'quill-demo';
+    connect(r);
+  }
+});
+document.getElementById('clear-btn').addEventListener('click', () => {
+  if (!ystrokes) {
+    alert('Connect first');
+    return;
+  }
+  if (!confirm('Clear all strokes for everyone in this room?')) return;
+  if (ystrokes.length > 0) ystrokes.delete(0, ystrokes.length);
+  strokesReceived = 0;
+  strokesSent = 0;
+  updateDiagnostics();
+});
+
+// ====== Init ======
+setTimeout(resize, 30);
+updateDiagnostics();
+</script>
+</body>
+</html>
