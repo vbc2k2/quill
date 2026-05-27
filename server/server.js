@@ -24,7 +24,10 @@ const path = require('path');
 const fs = require('fs');
 const url = require('url');
 const WebSocket = require('ws');
-const { setupWSConnection } = require('y-websocket/bin/utils.js');
+// IMPORTANT: y-websocket's exports map keys this path as `./bin/utils`
+// (no .js extension). With a .js suffix Node throws ERR_PACKAGE_PATH_NOT_EXPORTED
+// on modern releases (Node 16+) where exports gates are enforced.
+const { setupWSConnection } = require('y-websocket/bin/utils');
 
 const PORT = parseInt(process.env.PORT || '1234', 10);
 const HOST = process.env.HOST || '0.0.0.0';
