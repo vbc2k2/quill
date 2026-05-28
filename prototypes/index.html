@@ -23,6 +23,22 @@
   --radius: 10px;
   --radius-sm: 6px;
 }
+html.dark {
+  --bg: #161616;
+  --canvas: #1d1d1d;
+  --surface: #232323;
+  --border: rgba(255,255,255,0.08);
+  --text: #ececec;
+  --text-muted: #a3a3a3;
+  --text-faint: #6b6b6b;
+  --accent: #7eb47c;
+  --accent-light: rgba(126,180,124,0.14);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 2px 10px rgba(0,0,0,0.5);
+  --shadow-lg: 0 6px 24px rgba(0,0,0,0.6);
+}
+html.dark .sun-icon { display: none; }
+html:not(.dark) .moon-icon { display: none; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
   height: 100%; width: 100%;
@@ -508,6 +524,146 @@ body[data-tool="hand"] #canvas:active { cursor: grabbing; }
   #inspector { right: 8px; min-width: 200px; }
 }
 
+/* Share modal */
+#share-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.45);
+  z-index: 100;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+#share-modal.open { display: flex; }
+.share-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 28px 22px;
+  box-shadow: var(--shadow-lg);
+  max-width: 360px;
+  width: calc(100% - 32px);
+  text-align: center;
+}
+.share-card h2 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+.share-card .share-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+  line-height: 1.45;
+}
+.share-card .qr-wrap {
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 16px;
+  padding: 14px;
+  background: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+}
+.share-card .qr-wrap img,
+.share-card .qr-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+.share-card .qr-placeholder {
+  color: var(--text-faint);
+  font-size: 12px;
+  text-align: center;
+}
+.share-card .share-url {
+  background: rgba(0,0,0,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 12px;
+  word-break: break-all;
+  text-align: center;
+}
+html.dark .share-card .share-url { background: rgba(255,255,255,0.04); }
+.share-card .room-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+.share-card .room-row label {
+  color: var(--text-muted);
+  align-self: center;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.share-card .room-row input {
+  flex: 1;
+  background: rgba(0,0,0,0.04);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--text);
+  outline: none;
+}
+html.dark .share-card .room-row input { background: rgba(255,255,255,0.04); }
+.share-card .share-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.share-card button {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.share-card button.primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.share-card button:hover { background: rgba(0,0,0,0.04); }
+html.dark .share-card button:hover { background: rgba(255,255,255,0.06); }
+.share-card button.primary:hover { background: #4a7649; }
+.share-card .copied-toast {
+  font-size: 11.5px;
+  color: var(--accent);
+  margin-top: 8px;
+  min-height: 14px;
+}
+
+/* Print mode — hide UI, show only the canvas */
+@media print {
+  @page { margin: 12mm; }
+  html, body { background: white !important; height: auto !important; overflow: visible !important; }
+  #sidebar, #topbar, #sync-bar, #page-tabs, #page-settings-popover, #zoom-controls, #inspector, #status, #share-modal {
+    display: none !important;
+  }
+  #app, #main, #canvas-container { display: block !important; height: auto !important; }
+  #canvas-container { position: static !important; overflow: visible !important; }
+  #canvas { position: static !important; width: 100% !important; height: auto !important; max-height: 100vh; }
+  #overlay-canvas { display: none !important; }
+}
+
 /* Sync bar (added) */
 #sync-bar {
   display: flex;
@@ -635,6 +791,18 @@ body[data-tool="hand"] #canvas:active { cursor: grabbing; }
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg>
         </button>
       </div>
+      <div class="tool-group">
+        <button class="tool" id="share-btn" title="Share — get a QR code for another device to join">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+        <button class="tool" id="export-pdf-btn" title="Export current page as PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+        </button>
+        <button class="tool" id="theme-toggle" title="Toggle dark mode">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
     </header>
     <div id="sync-bar">
       <span class="sync-label">Sync</span>
@@ -665,6 +833,28 @@ body[data-tool="hand"] #canvas:active { cursor: grabbing; }
 </div>
 
 <input type="file" id="image-input" accept="image/*" style="display:none">
+
+<!-- Share modal -->
+<div id="share-modal" role="dialog" aria-modal="true" aria-labelledby="share-title">
+  <div class="share-card">
+    <h2 id="share-title">Open Quill on another device</h2>
+    <p class="share-sub">Scan with your iPad camera. Both devices will join the same room and sync in real time.</p>
+    <div class="qr-wrap" id="share-qr"><span class="qr-placeholder">Generating…</span></div>
+    <div class="room-row">
+      <label for="share-room-input">Room</label>
+      <input id="share-room-input" maxlength="40" placeholder="my-notes" />
+    </div>
+    <div class="share-url" id="share-url-text">—</div>
+    <div class="share-actions">
+      <button id="share-copy-btn">Copy URL</button>
+      <button id="share-close-btn" class="primary">Done</button>
+    </div>
+    <div class="copied-toast" id="share-copied">&nbsp;</div>
+  </div>
+</div>
+
+<!-- QR encoder (standalone, exposes window.qrcode). Not in the esbuild bundle. -->
+<script src="./vendor/qrcode.min.js"></script>
 
 <script type="module">
 // Load Y.js sync libraries from local vendor bundle (built with esbuild,
@@ -701,12 +891,16 @@ const SHAPE_VARIANTS = [
   { id: 'arrow', label: 'Arrow' },
 ];
 const PAGE_TEMPLATES = [
-  { id: 'blank',    label: 'Blank' },
-  { id: 'lined',    label: 'Lined' },
-  { id: 'wideline', label: 'Wide' },
-  { id: 'grid',     label: 'Grid' },
-  { id: 'squares',  label: 'Squares' },
-  { id: 'dots',     label: 'Dots' },
+  { id: 'blank',     label: 'Blank' },
+  { id: 'lined',     label: 'Lined' },
+  { id: 'wideline',  label: 'Wide' },
+  { id: 'grid',      label: 'Grid' },
+  { id: 'squares',   label: 'Squares' },
+  { id: 'dots',      label: 'Dots' },
+  { id: 'margin',    label: 'Margin' },
+  { id: 'cornell',   label: 'Cornell' },
+  { id: 'music',     label: 'Music' },
+  { id: 'isometric', label: 'Isometric' },
 ];
 
 // ============================================================
@@ -935,12 +1129,25 @@ function clearCanvas(c, targetCanvas) {
   c.restore();
 }
 
+function isDarkMode() {
+  return document.documentElement.classList.contains('dark');
+}
+function themeColors() {
+  const dark = isDarkMode();
+  return {
+    canvasBg:    dark ? '#1d1d1d' : '#fdfcf7',
+    paperStroke: dark ? 'rgba(120,125,135,0.20)' : 'rgba(180,170,150,0.22)',
+    paperDot:    dark ? 'rgba(120,125,135,0.45)' : 'rgba(150,140,120,0.42)',
+    marginLine:  dark ? 'rgba(220,120,120,0.55)' : 'rgba(220,100,100,0.55)',
+  };
+}
+
 function render() {
   // Main canvas
   const w = canvas.clientWidth, h = canvas.clientHeight;
   // Clear with background
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = '#fdfcf7';
+  ctx.fillStyle = themeColors().canvasBg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   applyMainTransform();
   drawPaperLines();
@@ -972,13 +1179,14 @@ function drawPaperLines() {
   if (template === 'blank') return;
 
   const spacing = template === 'wideline' ? 50
-                : template === 'lined' ? 32
+                : template === 'lined' || template === 'margin' || template === 'cornell' ? 32
                 : template === 'squares' ? 40
-                : 24; // grid, dots
+                : 24; // grid, dots, isometric, music
   const startY = Math.floor(wt / spacing) * spacing;
   const startX = Math.floor(wl / spacing) * spacing;
-  c.strokeStyle = 'rgba(180, 170, 150, 0.22)';
-  c.fillStyle = 'rgba(150, 140, 120, 0.42)';
+  const colors = themeColors();
+  c.strokeStyle = colors.paperStroke;
+  c.fillStyle = colors.paperDot;
   c.lineWidth = 1 / view.scale;
   if (template === 'lined' || template === 'wideline') {
     c.beginPath();
@@ -993,6 +1201,64 @@ function drawPaperLines() {
     const r = 1.2 / view.scale;
     for (let y = startY; y <= wb; y += spacing) {
       for (let x = startX; x <= wr; x += spacing) {
+        c.beginPath();
+        c.arc(x, y, r, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+  } else if (template === 'margin') {
+    // Lined paper with a red vertical margin line at world x=80
+    c.beginPath();
+    for (let y = startY; y <= wb; y += spacing) { c.moveTo(wl, y); c.lineTo(wr, y); }
+    c.stroke();
+    c.save();
+    c.strokeStyle = colors.marginLine;
+    c.lineWidth = 1.2 / view.scale;
+    c.beginPath();
+    c.moveTo(80, wt); c.lineTo(80, wb);
+    c.stroke();
+    c.restore();
+  } else if (template === 'cornell') {
+    // Lined paper + cue column at x=240 + summary line at world y=900
+    c.beginPath();
+    for (let y = startY; y <= wb; y += spacing) {
+      if (y < 900) { c.moveTo(wl, y); c.lineTo(wr, y); }
+    }
+    c.stroke();
+    c.save();
+    c.strokeStyle = colors.marginLine;
+    c.lineWidth = 1.2 / view.scale;
+    c.beginPath();
+    c.moveTo(240, wt);  c.lineTo(240, 900);
+    c.moveTo(wl, 900);  c.lineTo(wr, 900);
+    c.stroke();
+    c.restore();
+  } else if (template === 'music') {
+    // Treble-clef style staff lines: groups of 5 close lines, big gap between groups
+    const lineGap = 9;
+    const groupHeight = lineGap * 4;
+    const groupSpacing = groupHeight + 55;
+    const groupStart = Math.floor(wt / groupSpacing) * groupSpacing;
+    c.beginPath();
+    for (let g = groupStart; g <= wb; g += groupSpacing) {
+      for (let i = 0; i < 5; i++) {
+        const y = g + i * lineGap;
+        c.moveTo(wl, y); c.lineTo(wr, y);
+      }
+    }
+    c.stroke();
+  } else if (template === 'isometric') {
+    // Triangular dot grid — easier to read at any scale than line-based iso
+    const step = 28;
+    const dy = step * 0.866;  // sin(60°)
+    const r = 1.3 / view.scale;
+    const rowStart = Math.floor(wt / dy);
+    for (let row = rowStart; row * dy <= wb; row++) {
+      const y = row * dy;
+      const xOffset = (row % 2) ? step / 2 : 0;
+      const startCol = Math.floor((wl - xOffset) / step);
+      for (let col = startCol; col * step + xOffset <= wr; col++) {
+        const x = col * step + xOffset;
         c.beginPath();
         c.arc(x, y, r, 0, Math.PI * 2);
         c.fill();
@@ -1534,7 +1800,7 @@ const tools = {
 
   shape: {
     down(e) {
-      const pos = getCanvasPoint(e);
+      const pos = snapToGrid(getCanvasPoint(e));
       const s = state.toolSettings.shape;
       activeDraw = {
         id: uid(), type: 'shape',
@@ -1546,7 +1812,7 @@ const tools = {
     },
     move(e) {
       if (!activeDraw) return;
-      const pos = getCanvasPoint(e);
+      const pos = snapToGrid(getCanvasPoint(e));
       activeDraw.w = pos.x - activeDraw.x;
       activeDraw.h = pos.y - activeDraw.y;
       renderActiveOverlay();
@@ -2041,6 +2307,38 @@ function makeTemplatePreview(template) {
         cx.beginPath(); cx.arc(x, y, 0.7, 0, Math.PI * 2); cx.fill();
       }
     }
+  } else if (template === 'margin') {
+    cx.beginPath();
+    for (let y = 6; y < 38; y += 6) { cx.moveTo(2, y); cx.lineTo(48, y); }
+    cx.stroke();
+    cx.save();
+    cx.strokeStyle = 'rgba(220, 100, 100, 0.7)';
+    cx.beginPath(); cx.moveTo(10, 2); cx.lineTo(10, 36);
+    cx.stroke();
+    cx.restore();
+  } else if (template === 'cornell') {
+    cx.beginPath();
+    for (let y = 6; y < 30; y += 6) { cx.moveTo(2, y); cx.lineTo(48, y); }
+    cx.stroke();
+    cx.save();
+    cx.strokeStyle = 'rgba(220, 100, 100, 0.7)';
+    cx.beginPath(); cx.moveTo(16, 2);  cx.lineTo(16, 30);
+    cx.moveTo(2, 30);  cx.lineTo(48, 30);
+    cx.stroke();
+    cx.restore();
+  } else if (template === 'music') {
+    cx.beginPath();
+    // Two staves of 5 lines each
+    for (let i = 0; i < 5; i++) { cx.moveTo(4, 6 + i * 2); cx.lineTo(46, 6 + i * 2); }
+    for (let i = 0; i < 5; i++) { cx.moveTo(4, 24 + i * 2); cx.lineTo(46, 24 + i * 2); }
+    cx.stroke();
+  } else if (template === 'isometric') {
+    for (let row = 0; row < 8; row++) {
+      const xOff = (row % 2) ? 2.5 : 0;
+      for (let x = 3 + xOff; x < 50; x += 5) {
+        cx.beginPath(); cx.arc(x, 4 + row * 4.3, 0.8, 0, Math.PI * 2); cx.fill();
+      }
+    }
   }
   return c;
 }
@@ -2338,6 +2636,7 @@ if (!state.currentNoteId || !state.notes[state.currentNoteId]) {
 }
 document.getElementById('note-title-input').value = state.notes[state.currentNoteId].title || '';
 document.body.dataset.tool = state.currentTool;
+loadTheme(); // Apply saved theme BEFORE first render so no light-mode flash
 renderSidebar();
 renderPageTabs();
 renderToolbar();
@@ -2579,6 +2878,183 @@ if (window.QuillSync) {
 } else {
   window.addEventListener('quill-sync-ready', wireSyncUI, { once: true });
 }
+
+// ============================================================
+// Theme (light / dark)
+// ============================================================
+const THEME_KEY = 'quill-theme';
+function loadTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved === 'dark')      document.documentElement.classList.add('dark');
+  else if (saved === 'light') document.documentElement.classList.remove('dark');
+  else {
+    // Match OS preference on first load
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add('dark');
+    }
+  }
+}
+function toggleTheme() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+  render();
+}
+
+// ============================================================
+// Snap-to-grid (used by shape tool when on a grid template)
+// ============================================================
+function snapToGrid(p) {
+  const page = currentPage();
+  const tpl = (page && page.template) || 'lined';
+  let spacing = 0;
+  if      (tpl === 'grid' || tpl === 'dots') spacing = 24;
+  else if (tpl === 'squares')                spacing = 40;
+  else if (tpl === 'isometric')              spacing = 14; // half of 28-step
+  else return p;
+  // Hard snap to nearest grid intersection when on a grid template
+  return {
+    x: Math.round(p.x / spacing) * spacing,
+    y: Math.round(p.y / spacing) * spacing,
+  };
+}
+
+// ============================================================
+// Export to PDF — uses the browser's print dialog. The @media print
+// stylesheet hides the chrome so only the canvas is on the printed page.
+// ============================================================
+function exportToPdf() {
+  activeDraw = null;
+  isPointerDown = false;
+  // Reset to default zoom for the cleanest output, restore after print.
+  const savedView = { ...state.view };
+  state.view = { x: 0, y: 0, scale: 1 };
+  updateZoomDisplay();
+  render();
+  const restore = () => {
+    window.removeEventListener('afterprint', restore);
+    state.view = savedView;
+    updateZoomDisplay();
+    render();
+  };
+  window.addEventListener('afterprint', restore);
+  // Small delay so the canvas redraw paints before the print dialog opens
+  setTimeout(() => window.print(), 80);
+}
+
+// ============================================================
+// Share modal — QR + LAN URL
+// ============================================================
+async function refreshShareModal() {
+  const roomInput = document.getElementById('share-room-input');
+  const urlEl     = document.getElementById('share-url-text');
+  const qrEl      = document.getElementById('share-qr');
+  let info;
+  try {
+    const r = await fetch('/api/info', { cache: 'no-store' });
+    info = await r.json();
+  } catch (e) {
+    info = { lanIp: null, url: location.origin + '/', port: parseInt(location.port || '80', 10) };
+  }
+  const room = (roomInput.value || 'my-notes').trim();
+  const baseUrl = (info && info.url) ? info.url : (location.origin + '/');
+  const fullUrl = baseUrl + '?room=' + encodeURIComponent(room);
+  urlEl.textContent = fullUrl;
+  qrEl.innerHTML = '';
+  if (typeof window.qrcode === 'function') {
+    try {
+      const qr = window.qrcode(0, 'M');
+      qr.addData(fullUrl);
+      qr.make();
+      qrEl.innerHTML = qr.createImgTag(6, 0);
+      const img = qrEl.querySelector('img');
+      if (img) {
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.imageRendering = 'pixelated';
+      }
+    } catch (e) {
+      qrEl.innerHTML = '<span class="qr-placeholder">QR error: ' + (e.message || e) + '</span>';
+    }
+  } else {
+    qrEl.innerHTML = '<span class="qr-placeholder">QR library not loaded</span>';
+  }
+}
+function openShareModal() {
+  const modal     = document.getElementById('share-modal');
+  const roomInput = document.getElementById('share-room-input');
+  const syncRoomInput = document.getElementById('sync-room');
+  roomInput.value = (syncRoomInput && syncRoomInput.value) || 'my-notes';
+  document.getElementById('share-copied').innerHTML = '&nbsp;';
+  modal.classList.add('open');
+  refreshShareModal();
+}
+function closeShareModal() {
+  document.getElementById('share-modal').classList.remove('open');
+}
+
+// ============================================================
+// Wire up new buttons (Share, Export PDF, Theme toggle) + URL ?room=
+// ============================================================
+(function wireFeatureButtons() {
+  const shareBtn = document.getElementById('share-btn');
+  if (shareBtn) shareBtn.addEventListener('click', openShareModal);
+  const closeBtn = document.getElementById('share-close-btn');
+  if (closeBtn) closeBtn.addEventListener('click', closeShareModal);
+  const roomInput = document.getElementById('share-room-input');
+  if (roomInput) {
+    let dbTimer = null;
+    roomInput.addEventListener('input', () => {
+      clearTimeout(dbTimer);
+      dbTimer = setTimeout(refreshShareModal, 180);
+    });
+  }
+  const copyBtn = document.getElementById('share-copy-btn');
+  if (copyBtn) copyBtn.addEventListener('click', async () => {
+    const url = document.getElementById('share-url-text').textContent;
+    const toast = document.getElementById('share-copied');
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.textContent = '✓ Copied!';
+      setTimeout(() => { toast.innerHTML = '&nbsp;'; }, 1800);
+    } catch (e) {
+      toast.textContent = 'Copy failed — select the URL and copy manually';
+    }
+  });
+  const modal = document.getElementById('share-modal');
+  if (modal) modal.addEventListener('click', (e) => {
+    if (e.target.id === 'share-modal') closeShareModal();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal && modal.classList.contains('open')) {
+      closeShareModal();
+    }
+  });
+
+  const exportBtn = document.getElementById('export-pdf-btn');
+  if (exportBtn) exportBtn.addEventListener('click', exportToPdf);
+
+  const themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+  // If the page was opened with ?room=xxx (e.g. via the QR scan on iPad),
+  // pre-fill the sync room and auto-connect once the sync library is ready.
+  const urlRoom = new URLSearchParams(location.search).get('room');
+  if (urlRoom) {
+    const syncRoom = document.getElementById('sync-room');
+    if (syncRoom) syncRoom.value = urlRoom;
+    const autoConnect = () => {
+      const btn = document.getElementById('sync-connect-btn');
+      if (btn && !btn.disabled && btn.textContent === 'Connect') {
+        // Slight delay so the local state loads before connecting
+        setTimeout(() => btn.click(), 300);
+      }
+    };
+    if (window.QuillSync) autoConnect();
+    else window.addEventListener('quill-sync-ready', autoConnect, { once: true });
+  }
+})();
+
+// loadTheme() is called early in the init block above. Nothing more to do here.
 </script>
 </body>
 </html>

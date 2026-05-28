@@ -23,6 +23,7 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const url = require('url');
+const os = require('os');
 const WebSocket = require('ws');
 // IMPORTANT: y-websocket's exports map keys this path as `./bin/utils`
 // (no .js extension). With a .js suffix Node throws ERR_PACKAGE_PATH_NOT_EXPORTED
@@ -105,7 +106,53 @@ function indexHtml(items, pathname) {
 </html>`;
 }
 
+// Pick the best LAN IPv4 to advertise for QR-share. Excludes loopback, link-local,
+// and Docker/VPN-style interfaces when possible. Returns the first plausible RFC1918
+// address, or null if none found.
+function getLanIp() {
+  const ifaces = os.networkInterfaces();
+  const candidates = [];
+  for (const name of Object.keys(ifaces)) {
+    for (const info of ifaces[name] || []) {
+      if (info.family !== 'IPv4' || info.internal) continue;
+      // Skip obvious virtual interfaces (Docker, VPN, etc.)
+      if (/^(vEthernet|docker|veth|vmnet|virbr|tap|tun)/i.test(name)) continue;
+      // Prefer common LAN ranges
+      const score = /^192\.168\./.test(info.address) ? 3
+                  : /^10\./.test(info.address) ? 2
+                  : /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(info.address) ? 1
+                  : 0;
+      candidates.push({ ip: info.address, name, score });
+    }
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0].ip;
+}
+
+function handleApi(req, res) {
+  const parsed = url.parse(req.url, true);
+  if (parsed.pathname === '/api/info') {
+    const lanIp = getLanIp();
+    const body = {
+      lanIp,
+      port: PORT,
+      url: lanIp ? `http://${lanIp}:${PORT}/` : `http://localhost:${PORT}/`,
+      version: '0.1.0',
+    };
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    });
+    res.end(JSON.stringify(body));
+    return true;
+  }
+  return false;
+}
+
 function serveStatic(req, res) {
+  if (handleApi(req, res)) return;
+
   const parsed = url.parse(req.url);
   let pathname = decodeURIComponent(parsed.pathname || '/');
   if (pathname === '/') pathname = '/';
@@ -178,10 +225,16 @@ server.listen(PORT, HOST, () => {
   console.log(`    ${localUrl}/                  (notes app)`);
   console.log(`    ${localUrl}/sync-demo.html    (minimal sync demo)`);
   console.log('');
+  const lanIp = getLanIp();
   console.log('  From iPad / other devices on the same network:');
-  console.log('    1. Find this machine\'s LAN IP (Windows: `ipconfig`, Linux/Mac: `ip a` or `ifconfig`)');
-  console.log('    2. Make sure your firewall allows incoming connections on port ' + PORT);
-  console.log('    3. Open http://<that-ip>:' + PORT + '/ on the other device');
+  if (lanIp) {
+    console.log(`    LAN URL: http://${lanIp}:${PORT}/`);
+    console.log('    (The in-app Share button generates a QR code for this URL.)');
+  } else {
+    console.log('    Couldn\'t auto-detect LAN IP. On Windows run `ipconfig`,');
+    console.log('    Linux/Mac `ip a` or `ifconfig`, and open http://<that-ip>:' + PORT + '/');
+  }
+  console.log('    Make sure your firewall allows incoming connections on port ' + PORT);
   console.log('');
   console.log('  Press Ctrl+C to stop.');
   console.log('');
