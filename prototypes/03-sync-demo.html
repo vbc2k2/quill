@@ -101,6 +101,16 @@ button, input { font-family: inherit; }
   color: var(--error);
   border-color: #f5c1c4;
 }
+.btn.tool {
+  width: 34px; height: 30px;
+  padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn.tool.active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
 .status-pill {
   display: inline-flex;
@@ -137,21 +147,44 @@ button, input { font-family: inherit; }
 
 .spacer { flex: 1; }
 
-.color-pill {
+.tool-group {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px 3px 4px;
   background: rgba(0,0,0,0.04);
-  border-radius: 12px;
-  font-size: 11.5px;
-  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 3px 8px;
 }
-.my-color {
-  width: 18px; height: 18px;
-  border-radius: 50%;
+.tool-group input[type=color] {
+  width: 22px; height: 22px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+.tool-group input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+.tool-group input[type=color]::-webkit-color-swatch {
   border: 2px solid var(--surface);
+  border-radius: 50%;
   box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.tool-group input[type=range] {
+  width: 80px;
+  accent-color: var(--accent);
+}
+.tool-group .label {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.tool-group .width-display {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 22px;
+  text-align: right;
 }
 
 #canvas-container {
@@ -167,6 +200,9 @@ button, input { font-family: inherit; }
   touch-action: none;
   background: var(--canvas);
   cursor: crosshair;
+}
+#canvas.eraser {
+  cursor: cell;
 }
 
 #info-card {
@@ -233,7 +269,8 @@ button, input { font-family: inherit; }
   #topbar { gap: 6px; padding: 8px 10px; }
   .brand { font-size: 13.5px; }
   .room-section input { width: 90px; font-size: 12px; }
-  .status-pill, .peers-pill, .color-pill { font-size: 11px; }
+  .status-pill, .peers-pill { font-size: 11px; }
+  .tool-group input[type=range] { width: 60px; }
 }
 </style>
 </head>
@@ -248,8 +285,17 @@ button, input { font-family: inherit; }
     <button class="btn primary" id="connect-btn">Connect</button>
     <span class="status-pill"><span class="indicator" id="indicator"></span><span id="status">Idle</span></span>
     <span class="peers-pill">peers: <span id="peers-count">0</span></span>
-    <span class="color-pill"><span class="my-color" id="my-color"></span>your pen</span>
+    <div class="tool-group">
+      <button class="btn tool active" id="tool-pen" title="Pen (P)">✏</button>
+      <button class="btn tool" id="tool-eraser" title="Eraser (E)">⌫</button>
+      <input type="color" id="color-picker" value="#1a1a1a" title="Pen color">
+      <span class="label">size</span>
+      <input type="range" id="width-slider" min="1" max="20" step="0.5" value="2.5" title="Pen width">
+      <span class="width-display" id="width-display">2.5</span>
+    </div>
     <div class="spacer"></div>
+    <button class="btn" id="undo-btn" title="Undo (Ctrl+Z)">↶</button>
+    <button class="btn" id="redo-btn" title="Redo (Ctrl+Shift+Z)">↷</button>
     <button class="btn danger" id="clear-btn">Clear room</button>
   </header>
   <div id="canvas-container">
@@ -258,7 +304,7 @@ button, input { font-family: inherit; }
       <h2>Two-device sync demo</h2>
       <p>Open this same URL on a second device — for example your <b>iPad</b> and your <b>Windows desktop</b>.</p>
       <p>Both devices should use the same room name. The default room is <span class="room-hint">quill-demo</span> — change it if you want privacy.</p>
-      <p>Anything one device draws appears on the other in real time, using Y.js CRDT + WebSocket transport.</p>
+      <p>Strokes appear on the other device <b>as you draw</b>, not just after pen-up. Strokes persist locally too — they're still here after a reload, even without the server.</p>
       <button class="btn primary" id="info-dismiss">Got it — start drawing</button>
     </div>
     <div id="diagnostics">—</div>
@@ -266,9 +312,7 @@ button, input { font-family: inherit; }
 </div>
 
 <script type="module">
-import * as Y from 'https://esm.sh/yjs@13.6.18';
-import { WebsocketProvider } from 'https://esm.sh/y-websocket@1.5.4';
-import { WebrtcProvider } from 'https://esm.sh/y-webrtc@10.3.0';
+import { Y, WebsocketProvider, WebrtcProvider, IndexeddbPersistence } from './vendor/quill-deps.js';
 
 // Detect iframe sandboxing — parent CSP often blocks our WebSocket
 const isInIframe = (() => { try { return window.self !== window.top; } catch (_) { return true; } })();
@@ -279,10 +323,35 @@ if (isInIframe) {
   document.body.insertBefore(warn, document.body.firstChild);
 }
 
-const colors = ['#1a1a1a', '#1e6fea', '#e23636', '#22a559', '#a855f7', '#f59e0b', '#ec4899', '#06b6d4', '#84cc16'];
+const palette = ['#1a1a1a', '#1e6fea', '#e23636', '#22a559', '#a855f7', '#f59e0b', '#ec4899', '#06b6d4', '#84cc16'];
 const myClientId = Math.random().toString(36).slice(2, 9);
-const myColor = colors[Math.floor(Math.random() * colors.length)];
-document.getElementById('my-color').style.background = myColor;
+
+// Persist user prefs across reloads
+const saved = (() => { try { return JSON.parse(localStorage.getItem('quill-prefs') || '{}'); } catch (_) { return {}; } })();
+let myColor = saved.color || palette[Math.floor(Math.random() * palette.length)];
+let myWidth = typeof saved.width === 'number' ? saved.width : 2.5;
+let currentTool = 'pen';
+
+function savePrefs() {
+  try { localStorage.setItem('quill-prefs', JSON.stringify({ color: myColor, width: myWidth })); } catch (_) {}
+}
+
+const colorPicker = document.getElementById('color-picker');
+const widthSlider = document.getElementById('width-slider');
+const widthDisplay = document.getElementById('width-display');
+colorPicker.value = myColor;
+widthSlider.value = myWidth;
+widthDisplay.textContent = myWidth.toString();
+
+colorPicker.addEventListener('input', (e) => {
+  myColor = e.target.value;
+  savePrefs();
+});
+widthSlider.addEventListener('input', (e) => {
+  myWidth = parseFloat(e.target.value);
+  widthDisplay.textContent = myWidth.toString();
+  savePrefs();
+});
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
@@ -304,35 +373,32 @@ window.addEventListener('resize', resize);
 let ydoc = null;
 let provider = null;          // websocket provider (also acts as primary identity for isStillCurrent)
 let webrtcProviderRef = null; // webrtc provider running in parallel for redundancy
+let idbProvider = null;       // IndexedDB persistence
+let undoManager = null;
 let ystrokes = null;
 let connected = false;
 let activeStroke = null;
 let strokesReceived = 0;
 let strokesSent = 0;
-let wsState = 'idle';         // 'connecting' | 'connected' | 'disconnected' | 'idle'
-let webrtcPeers = 0;          // count of webrtc peers
-let pendingDisconnectStatus = null; // debounce 'disconnected' UI
+let wsState = 'idle';
+let webrtcPeers = 0;
+let pendingDisconnectStatus = null;
+let lastAwarenessSend = 0;
+const AWARENESS_HZ = 60;
+const AWARENESS_MIN_INTERVAL_MS = 1000 / AWARENESS_HZ;
 
 // ====== Yjs connection ======
 function connect(room) {
   disconnect();
   setStatus('connecting');
 
-  // Capture as locals — listeners must NOT read module-level provider/ystrokes.
   const localDoc = new Y.Doc();
-  // Pick WebSocket URL based on how this page is loaded:
-  // - Served by the bundled server (http://localhost:1234, http://192.168.x.x:1234)
-  //   → connect to the same origin (no CORS, no mixed-content issues)
-  // - Opened standalone via file:// → fall back to the public Y.js demo server
-  // - Override with ?server=ws://other-host:1234
   const urlParams = new URLSearchParams(location.search);
   const wsUrl = urlParams.get('server') ||
     (location.protocol === 'file:' || !location.host
       ? 'wss://demos.yjs.dev/ws'
       : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
   const localWs = new WebsocketProvider(wsUrl, room, localDoc);
-  // Run y-webrtc in parallel as a redundant transport — peer-to-peer.
-  // If the WebSocket keeps dropping, peers can still sync directly via WebRTC.
   let localWebrtc = null;
   try {
     localWebrtc = new WebrtcProvider(room, localDoc, {
@@ -344,11 +410,15 @@ function connect(room) {
   }
   const localYstrokes = localDoc.getArray('strokes');
   const localAwareness = localWs.awareness;
+  const localIdb = new IndexeddbPersistence('quill-room-' + room, localDoc);
+  const localUndo = new Y.UndoManager(localYstrokes, { captureTimeout: 400 });
 
   ydoc = localDoc;
   provider = localWs;
   webrtcProviderRef = localWebrtc;
   ystrokes = localYstrokes;
+  idbProvider = localIdb;
+  undoManager = localUndo;
 
   const isStillCurrent = () => provider === localWs;
 
@@ -393,27 +463,28 @@ function connect(room) {
       const states = localAwareness.getStates();
       document.getElementById('peers-count').textContent = Math.max(0, states.size - 1);
     } catch (_) { /* awareness mid-teardown, ignore */ }
+    // Any awareness change can include a peer's liveStroke update — re-render.
+    render();
   });
 
   localYstrokes.observe((evt) => {
     if (!isStillCurrent()) return;
-    let received = 0;
-    for (const change of evt.changes.delta) {
-      if (change.insert) received += change.insert.length;
-    }
-    if (received > 0) {
-      const added = evt.changes.added;
-      let remote = 0;
-      for (const item of added) {
-        const content = item.content && item.content.getContent && item.content.getContent();
-        if (content) {
-          for (const c of content) {
-            if (c && c.clientId && c.clientId !== myClientId) remote += 1;
-          }
+    let remote = 0;
+    for (const item of evt.changes.added) {
+      const content = item.content && item.content.getContent && item.content.getContent();
+      if (content) {
+        for (const c of content) {
+          if (c && c.clientId && c.clientId !== myClientId) remote += 1;
         }
       }
-      strokesReceived += remote;
     }
+    strokesReceived += remote;
+    render();
+    updateDiagnostics();
+  });
+
+  localIdb.on('synced', () => {
+    if (!isStillCurrent()) return;
     render();
     updateDiagnostics();
   });
@@ -423,6 +494,8 @@ function connect(room) {
 }
 
 function disconnect() {
+  if (undoManager) { try { undoManager.destroy(); } catch(_) {} undoManager = null; }
+  if (idbProvider) { try { idbProvider.destroy(); } catch(_) {} idbProvider = null; }
   if (webrtcProviderRef) { try { webrtcProviderRef.destroy(); } catch(_) {} webrtcProviderRef = null; }
   if (provider) { try { provider.destroy(); } catch(_) {} provider = null; }
   if (ydoc) { try { ydoc.destroy(); } catch(_) {} ydoc = null; }
@@ -440,10 +513,6 @@ function disconnect() {
 }
 
 function setStatus(s) {
-  // Debounce 'disconnected' — y-websocket auto-reconnects rapidly on a flaky
-  // server. Showing 'disconnected' immediately causes visible UI flicker even
-  // though Y.js's queue keeps state correct underneath. Wait 4s before
-  // believing it's really down.
   if (pendingDisconnectStatus) { clearTimeout(pendingDisconnectStatus); pendingDisconnectStatus = null; }
   if (s === 'disconnected') {
     pendingDisconnectStatus = setTimeout(() => { pendingDisconnectStatus = null; applyStatus('disconnected'); }, 4000);
@@ -480,8 +549,9 @@ function updateDiagnostics() {
                 wsState === 'connecting' ? 'ws …' :
                 wsState === 'disconnected' ? 'ws ✕' : 'ws –';
   const rtcTag = webrtcProviderRef ? `rtc ${webrtcPeers}` : 'rtc –';
+  const localCount = ystrokes ? ystrokes.length : 0;
   document.getElementById('diagnostics').textContent =
-    `room: ${room} · ${wsTag} · ${rtcTag} · sent: ${strokesSent} · received: ${strokesReceived}`;
+    `room: ${room} · ${wsTag} · ${rtcTag} · strokes: ${localCount} · sent: ${strokesSent} · received: ${strokesReceived}`;
 }
 
 // ====== Canvas drawing ======
@@ -503,50 +573,119 @@ function render() {
     const all = ystrokes.toArray();
     for (const s of all) drawStroke(s);
   }
+  // remote in-progress strokes (live from awareness)
+  if (provider && provider.awareness) {
+    const states = provider.awareness.getStates();
+    states.forEach((state, clientId) => {
+      if (clientId === provider.awareness.clientID) return;
+      if (state && state.liveStroke) drawStroke(state.liveStroke);
+    });
+  }
   if (activeStroke) drawStroke(activeStroke);
 }
 
+// Smooth stroke rendering using midpoint quadratic curves.
 function drawStroke(s) {
   if (!s || !s.points || s.points.length === 0) return;
   ctx.strokeStyle = s.color || '#111';
   ctx.lineWidth = s.width || 2.5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.beginPath();
-  if (s.points.length === 1) {
+  const pts = s.points;
+  if (pts.length === 1) {
     ctx.fillStyle = s.color || '#111';
-    ctx.arc(s.points[0].x, s.points[0].y, (s.width || 2.5) / 2, 0, Math.PI * 2);
+    ctx.beginPath();
+    ctx.arc(pts[0].x, pts[0].y, (s.width || 2.5) / 2, 0, Math.PI * 2);
     ctx.fill();
-  } else {
-    ctx.moveTo(s.points[0].x, s.points[0].y);
-    for (let i = 1; i < s.points.length; i++) {
-      ctx.lineTo(s.points[i].x, s.points[i].y);
-    }
-    ctx.stroke();
+    return;
   }
+  if (pts.length === 2) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    ctx.lineTo(pts[1].x, pts[1].y);
+    ctx.stroke();
+    return;
+  }
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const midX = (pts[i].x + pts[i + 1].x) / 2;
+    const midY = (pts[i].y + pts[i + 1].y) / 2;
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, midX, midY);
+  }
+  // last segment to the final point
+  const last = pts[pts.length - 1];
+  ctx.lineTo(last.x, last.y);
+  ctx.stroke();
 }
 
 // ====== Pointer input ======
+function pointerPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function pushAwarenessLive() {
+  if (!provider || !provider.awareness) return;
+  const now = performance.now();
+  if (now - lastAwarenessSend < AWARENESS_MIN_INTERVAL_MS) return;
+  lastAwarenessSend = now;
+  provider.awareness.setLocalStateField('liveStroke', activeStroke);
+}
+
+function clearAwarenessLive() {
+  if (!provider || !provider.awareness) return;
+  provider.awareness.setLocalStateField('liveStroke', null);
+}
+
+function eraseAt(p) {
+  if (!ystrokes || !ydoc) return;
+  const radius = Math.max(8, myWidth * 3);
+  const r2 = radius * radius;
+  const all = ystrokes.toArray();
+  const toDelete = [];
+  for (let i = all.length - 1; i >= 0; i--) {
+    const s = all[i];
+    if (!s || !s.points) continue;
+    for (const pt of s.points) {
+      const dx = pt.x - p.x, dy = pt.y - p.y;
+      if (dx * dx + dy * dy <= r2) { toDelete.push(i); break; }
+    }
+  }
+  if (toDelete.length === 0) return;
+  ydoc.transact(() => {
+    for (const idx of toDelete) ystrokes.delete(idx, 1);
+  });
+}
+
 canvas.addEventListener('pointerdown', (e) => {
-  if (e.pointerType === 'touch') return;
   e.preventDefault();
   try { canvas.setPointerCapture(e.pointerId); } catch(_){}
-  const rect = canvas.getBoundingClientRect();
+  const p = pointerPos(e);
+  if (currentTool === 'eraser') {
+    eraseAt(p);
+    activeStroke = { _eraser: true };
+    return;
+  }
   activeStroke = {
     id: myClientId + '-' + Date.now(),
     clientId: myClientId,
     color: myColor,
-    width: 2.5,
-    points: [{ x: e.clientX - rect.left, y: e.clientY - rect.top }],
+    width: myWidth,
+    points: [p],
     ts: Date.now(),
   };
+  pushAwarenessLive();
   render();
 });
 
 canvas.addEventListener('pointermove', (e) => {
   if (!activeStroke) return;
-  if (e.pointerType === 'touch') return;
   e.preventDefault();
+  if (currentTool === 'eraser') {
+    eraseAt(pointerPos(e));
+    return;
+  }
   const rect = canvas.getBoundingClientRect();
   const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
   for (const ce of events) {
@@ -555,30 +694,60 @@ canvas.addEventListener('pointermove', (e) => {
       y: ce.clientY - rect.top,
     });
   }
+  pushAwarenessLive();
   render();
 });
 
 function endStroke() {
   if (!activeStroke) return;
+  if (activeStroke._eraser) {
+    activeStroke = null;
+    return;
+  }
   if (ystrokes && activeStroke.points.length > 0) {
     ystrokes.push([activeStroke]);
     strokesSent += 1;
     updateDiagnostics();
-  } else if (!ystrokes && activeStroke.points.length > 0) {
-    // not connected — keep local for visual feedback
   }
   activeStroke = null;
+  clearAwarenessLive();
   render();
 }
 canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', endStroke);
 canvas.addEventListener('pointerleave', endStroke);
 
-// Prevent native gestures on canvas
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('touchmove', e => {
   if (e.target.closest('#canvas-container')) e.preventDefault();
 }, { passive: false });
+
+// ====== Tools ======
+function setTool(t) {
+  currentTool = t;
+  document.getElementById('tool-pen').classList.toggle('active', t === 'pen');
+  document.getElementById('tool-eraser').classList.toggle('active', t === 'eraser');
+  canvas.classList.toggle('eraser', t === 'eraser');
+}
+document.getElementById('tool-pen').addEventListener('click', () => setTool('pen'));
+document.getElementById('tool-eraser').addEventListener('click', () => setTool('eraser'));
+
+// ====== Undo / Redo ======
+function doUndo() { if (undoManager) undoManager.undo(); }
+function doRedo() { if (undoManager) undoManager.redo(); }
+document.getElementById('undo-btn').addEventListener('click', doUndo);
+document.getElementById('redo-btn').addEventListener('click', doRedo);
+
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target && e.target.tagName) || '';
+  // Don't hijack keys when typing into the room input
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); doUndo(); }
+  else if (mod && (e.key === 'y' || e.key === 'Y' || ((e.key === 'z' || e.key === 'Z') && e.shiftKey))) { e.preventDefault(); doRedo(); }
+  else if (!mod && (e.key === 'p' || e.key === 'P')) setTool('pen');
+  else if (!mod && (e.key === 'e' || e.key === 'E')) setTool('eraser');
+});
 
 // ====== UI handlers ======
 document.getElementById('connect-btn').addEventListener('click', () => {
