@@ -22,7 +22,7 @@ You should see:
   WS    : ws://localhost:1234
 ```
 
-Open `http://localhost:1234/02-quill-v2.html` or `http://localhost:1234/03-sync-demo.html` in your browser.
+Open `http://localhost:1234/index.html` or `http://localhost:1234/sync-demo.html` in your browser.
 
 ## Configure via environment variables
 
@@ -48,7 +48,7 @@ On the same Wi-Fi network:
    - Windows: Settings → Privacy & Security → Windows Security → Firewall → Allow an app, or run `New-NetFirewallRule -DisplayName "Quill" -Direction Inbound -LocalPort 1234 -Protocol TCP -Action Allow` in admin PowerShell
    - macOS: System Settings → Network → Firewall → allow Node when prompted
    - Linux (ufw): `sudo ufw allow 1234/tcp`
-3. **Open on the other device** (iPad, etc.): `http://<that-LAN-IP>:1234/03-sync-demo.html`
+3. **Open on the other device** (iPad, etc.): `http://<that-LAN-IP>:1234/sync-demo.html`
 
 The page detects the host automatically — both devices will sync to the same server with no extra configuration.
 

@@ -15,8 +15,8 @@
  *   PORT=8080 npm start          # custom port
  *   HOST=127.0.0.1 npm start     # bind to loopback only
  *
- * Then open http://localhost:1234/03-sync-demo.html or
- * http://<your-LAN-IP>:1234/03-sync-demo.html from another device.
+ * Then open http://localhost:1234/ or
+ * http://<your-LAN-IP>:1234/ from another device.
  */
 
 const http = require('http');
@@ -175,13 +175,13 @@ server.listen(PORT, HOST, () => {
   console.log('  └────────────────────────────────────────────┘');
   console.log('');
   console.log('  Open in your browser:');
-  console.log(`    ${localUrl}/02-quill-v2.html`);
-  console.log(`    ${localUrl}/03-sync-demo.html`);
+  console.log(`    ${localUrl}/                  (notes app)`);
+  console.log(`    ${localUrl}/sync-demo.html    (minimal sync demo)`);
   console.log('');
   console.log('  From iPad / other devices on the same network:');
   console.log('    1. Find this machine\'s LAN IP (Windows: `ipconfig`, Linux/Mac: `ip a` or `ifconfig`)');
   console.log('    2. Make sure your firewall allows incoming connections on port ' + PORT);
-  console.log('    3. Open http://<that-ip>:' + PORT + '/03-sync-demo.html on the other device');
+  console.log('    3. Open http://<that-ip>:' + PORT + '/ on the other device');
   console.log('');
   console.log('  Press Ctrl+C to stop.');
   console.log('');

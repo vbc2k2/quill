@@ -53,7 +53,7 @@ You should see the same banner you saw on Windows. The Pi is now serving on port
 Test from the Pi itself (in another SSH window):
 
 ```bash
-curl http://localhost:1234/03-sync-demo.html | head -20
+curl http://localhost:1234/sync-demo.html | head -20
 ```
 
 You should see HTML coming back.
@@ -68,7 +68,7 @@ Take note of the IP — e.g. `192.168.1.30`.
 
 ### 6. Open it on your iPad and Windows
 
-- iPad Safari: `http://192.168.1.30:1234/03-sync-demo.html`
+- iPad Safari: `http://192.168.1.30:1234/sync-demo.html`
 - Windows browser: same URL
 - Click Connect on both. Draw on iPad — see it on Windows.
 
@@ -126,7 +126,7 @@ The Pi's IP can change if your router hands it a different DHCP lease. Two ways 
 Most home routers (search the admin UI for "DHCP reservation" or "static lease") let you pin a specific IP to a specific MAC address. Find the Pi's MAC: `ip link show wlan0` (or `eth0`).
 
 **Option B — Use mDNS (recommended for home use):**
-Pi's already advertise themselves as `<hostname>.local`. Default hostname is `raspberrypi`, so `http://raspberrypi.local:1234/03-sync-demo.html` works from most devices, including iPad.
+Pi's already advertise themselves as `<hostname>.local`. Default hostname is `raspberrypi`, so `http://raspberrypi.local:1234/sync-demo.html` works from most devices, including iPad.
 
 You can rename via `sudo raspi-config` → System Options → Hostname. Pick something memorable like `quill` → `http://quill.local:1234/...`.
 

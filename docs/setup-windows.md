@@ -58,7 +58,7 @@ Leave this terminal window open. The server runs until you press Ctrl+C.
 Open Chrome / Edge / Firefox and go to:
 
 ```
-http://localhost:1234/03-sync-demo.html
+http://localhost:1234/sync-demo.html
 ```
 
 Draw something — it should work. Now open the same URL in a second browser window or incognito tab. They should sync between the two tabs. This proves the server itself works.
@@ -88,7 +88,7 @@ New-NetFirewallRule -DisplayName "Quill" -Direction Inbound -LocalPort 1234 -Pro
 On iPad Safari, navigate to:
 
 ```
-http://192.168.1.42:1234/03-sync-demo.html
+http://192.168.1.42:1234/sync-demo.html
 ```
 
 (Use **your** actual IP from step 5.)

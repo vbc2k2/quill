@@ -667,11 +667,11 @@ body[data-tool="hand"] #canvas:active { cursor: grabbing; }
 <input type="file" id="image-input" accept="image/*" style="display:none">
 
 <script type="module">
-// Load Y.js sync libraries from CDN, expose on window for the main script.
-// Same-origin WebSocket is preferred (so when served by the Pi/local server,
-// sync goes through that server with no CORS/mixed-content issues).
-import * as Y from 'https://esm.sh/yjs@13.6.18';
-import { WebsocketProvider } from 'https://esm.sh/y-websocket@1.5.4';
+// Load Y.js sync libraries from local vendor bundle (built with esbuild,
+// see server/build.js). Avoids the esm.sh roundtrip on every page load and
+// works offline. Same-origin WebSocket is preferred so sync also runs through
+// the Pi/local server without CORS or mixed-content issues.
+import { Y, WebsocketProvider } from './vendor/quill-deps.js';
 window.QuillSync = { Y, WebsocketProvider };
 window.dispatchEvent(new Event('quill-sync-ready'));
 </script>
@@ -759,6 +759,17 @@ function save() {
     // Also push to sync if connected (defined below — see Sync section)
     if (typeof pushToSync === 'function') pushToSync(data);
   }, 400);
+}
+// Immediate write — skips the 400ms debounce. Used on stroke commit so the
+// persistent state reaches peers BEFORE we clear our awareness liveStroke,
+// avoiding a visible gap where the stroke briefly disappears on the peer.
+function saveNow() {
+  clearTimeout(saveTimer); saveTimer = null;
+  const data = snapshotState();
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) { flashStatus('Save failed: ' + e.message); }
+  if (typeof pushToSync === 'function') pushToSync(data);
 }
 function load() {
   try {
@@ -1105,7 +1116,45 @@ function renderActiveOverlay() {
       if (activeDraw.type === 'stroke') drawStrokeTo(overlayCtx, activeDraw);
       else if (activeDraw.type === 'shape') drawShapeTo(overlayCtx, activeDraw);
     }
+    // Remote peers' in-progress strokes (live broadcast via Y.js awareness).
+    // Only render peers viewing the same note + page as us.
+    if (syncProvider && syncProvider.awareness) {
+      const myClientId = syncProvider.awareness.clientID;
+      syncProvider.awareness.getStates().forEach((st, cid) => {
+        if (cid === myClientId || !st || !st.liveStroke) return;
+        if (st.liveStroke.noteId !== state.currentNoteId) return;
+        if (st.liveStroke.pageId !== state.currentPageId) return;
+        const s = st.liveStroke.stroke;
+        if (s && s.type === 'stroke') drawStrokeTo(overlayCtx, s);
+      });
+    }
   });
+}
+
+// ============================================================
+// Live stroke broadcasting (awareness)
+// ============================================================
+// Peers see your stroke draw in real-time, not just after pointer-up.
+// Awareness is ephemeral state — it doesn't pollute the persistent doc.
+let lastLiveBroadcastTs = 0;
+const LIVE_BROADCAST_HZ = 60;
+function broadcastLiveStroke() {
+  if (!syncProvider || !syncProvider.awareness) return;
+  if (!activeDraw || activeDraw.type !== 'stroke') return;
+  const now = performance.now();
+  if (now - lastLiveBroadcastTs < 1000 / LIVE_BROADCAST_HZ) return;
+  lastLiveBroadcastTs = now;
+  try {
+    syncProvider.awareness.setLocalStateField('liveStroke', {
+      noteId: state.currentNoteId,
+      pageId: state.currentPageId,
+      stroke: activeDraw,
+    });
+  } catch (_) { /* awareness mid-teardown */ }
+}
+function clearLiveStroke() {
+  if (!syncProvider || !syncProvider.awareness) return;
+  try { syncProvider.awareness.setLocalStateField('liveStroke', null); } catch (_) {}
 }
 
 // ============================================================
@@ -1285,6 +1334,7 @@ const tools = {
         color: s.color, width: s.width,
         points: [{ x: pos.x, y: pos.y, p: e.pressure || 0.5 }],
       };
+      broadcastLiveStroke();
       renderActiveOverlay();
     },
     move(e) {
@@ -1297,6 +1347,7 @@ const tools = {
         if (dx*dx + dy*dy < 0.6) continue;
         activeDraw.points.push({ x: pos.x, y: pos.y, p: ce.pressure || 0.5 });
       }
+      broadcastLiveStroke();
       renderActiveOverlay();
     },
     up() {
@@ -1304,8 +1355,12 @@ const tools = {
       if (activeDraw.points.length > 0) {
         snapshot();
         currentPage().elements.push(activeDraw);
-        save();
+        // Push persistent state to peers BEFORE clearing the live awareness
+        // stroke. Both messages go down the same WebSocket so peer receives
+        // the committed stroke first, then the liveStroke clear — no flicker.
+        saveNow();
       }
+      clearLiveStroke();
       activeDraw = null;
       render();
     },
@@ -1320,6 +1375,7 @@ const tools = {
         color: s.color, width: s.width,
         points: [{ x: pos.x, y: pos.y, p: 1 }],
       };
+      broadcastLiveStroke();
       renderActiveOverlay();
     },
     move(e) {
@@ -1332,6 +1388,7 @@ const tools = {
         if ((pos.x-prev.x)**2 + (pos.y-prev.y)**2 < 4) continue;
         pts.push({ x: pos.x, y: pos.y, p: 1 });
       }
+      broadcastLiveStroke();
       renderActiveOverlay();
     },
     up() {
@@ -1339,8 +1396,9 @@ const tools = {
       if (activeDraw.points.length > 0) {
         snapshot();
         currentPage().elements.push(activeDraw);
-        save();
+        saveNow();
       }
+      clearLiveStroke();
       activeDraw = null;
       render();
     },
@@ -2429,6 +2487,8 @@ function syncConnect(room) {
         const states = localProvider.awareness.getStates();
         document.getElementById('sync-peers-count').textContent = Math.max(0, states.size - 1);
       } catch (_) {}
+      // Repaint to pick up any peer's liveStroke change.
+      renderActiveOverlay();
     });
   } catch (e) { console.warn('Awareness setup failed:', e); }
 

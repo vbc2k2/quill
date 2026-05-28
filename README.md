@@ -9,10 +9,10 @@ An open-source, cross-platform notes app where the **iPad-to-desktop sync loop**
 ```
 quill/
 ├── prototypes/      # Self-contained HTML prototypes you can open in any browser
-│   ├── 00-ink-latency-test.html   # Minimal canvas: pen latency measurement
-│   ├── 01-quill-v1.html           # First full-feature build (folders, all tools)
-│   ├── 02-quill-v2.html           # Polished: smooth ink, zoom, hand tool, page templates
-│   └── 03-sync-demo.html          # Two-device Y.js sync demo
+│   ├── index.html                 # The notes app — smooth ink, zoom, hand tool, page templates, live sync
+│   ├── sync-demo.html             # Minimal two-device Y.js sync demo
+│   ├── ink-latency-test.html      # Minimal canvas: pen latency measurement
+│   └── vendor/quill-deps.js       # Bundled yjs + y-websocket + y-webrtc + y-indexeddb (esbuild output)
 ├── server/          # Self-hostable y-websocket sync server (Node)
 ├── docs/            # Architecture, setup guides, roadmap
 └── README.md        # You are here
@@ -32,13 +32,15 @@ npm start
 The server starts on `http://localhost:1234` and serves the prototypes alongside the WebSocket sync endpoint on the same port.
 
 Open in a browser:
-- `http://localhost:1234/02-quill-v2.html` — the main notes app
-- `http://localhost:1234/03-sync-demo.html` — minimal sync demonstration
+- `http://localhost:1234/` — the main notes app
+- `http://localhost:1234/sync-demo.html` — minimal sync demonstration
 
 From another device on the same network (your iPad, for example):
 1. Find your machine's LAN IP — on Windows: `ipconfig` and look for IPv4 Address (usually `192.168.x.x`)
-2. On iPad Safari, open `http://<that-ip>:1234/03-sync-demo.html`
+2. On iPad Safari, open `http://<that-ip>:1234/`
 3. The page detects the host automatically — sync just works between your devices
+
+If you're hosting on a Raspberry Pi, you can use the Pi's hostname instead of its IP (mDNS): for example `http://raspberrypi.local:1234/` works from iPad Safari without knowing the Pi's current IP.
 
 Detailed setup:
 - [Windows PC setup](docs/setup-windows.md)
