@@ -651,6 +651,138 @@ html.dark .share-card button:hover { background: rgba(255,255,255,0.06); }
   min-height: 14px;
 }
 
+/* Checkbox element */
+.checkbox-element {
+  background: transparent;
+  border: 1px dashed transparent;
+  padding: 4px 8px;
+  font-size: 15px;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  cursor: default;
+  min-height: 28px;
+}
+body[data-tool="lasso"] .checkbox-element:hover { border-color: rgba(0,0,0,0.18); }
+html.dark body[data-tool="lasso"] .checkbox-element:hover { border-color: rgba(255,255,255,0.2); }
+.checkbox-element .cb-box {
+  width: 18px; height: 18px;
+  border: 1.8px solid var(--text-muted);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, border-color 0.12s;
+  pointer-events: auto;
+}
+.checkbox-element .cb-box:hover { border-color: var(--accent); }
+.checkbox-element.checked .cb-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.checkbox-element .cb-box svg { width: 12px; height: 12px; color: white; opacity: 0; transition: opacity 0.12s; }
+.checkbox-element.checked .cb-box svg { opacity: 1; }
+.checkbox-element .cb-label {
+  flex: 1;
+  outline: none;
+  min-width: 80px;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.checkbox-element.checked .cb-label {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* Sticky note (text element variant) */
+.text-element.sticky {
+  border-radius: 6px;
+  padding: 10px 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+  border: none;
+  min-width: 140px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+html.dark .text-element.sticky { box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+
+/* Pen presets row in inspector */
+.pen-presets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pen-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 4px;
+  background: rgba(0,0,0,0.04);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text);
+}
+.pen-preset:hover { background: rgba(0,0,0,0.07); }
+html.dark .pen-preset { background: rgba(255,255,255,0.04); }
+html.dark .pen-preset:hover { background: rgba(255,255,255,0.08); }
+.pen-preset .swatch {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+.pen-preset .del-x {
+  margin-left: 2px;
+  opacity: 0;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.pen-preset:hover .del-x { opacity: 0.7; }
+.pen-preset .del-x:hover { opacity: 1; color: #c1373d; }
+.preset-save-btn {
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid rgba(91,140,90,0.25);
+  border-radius: 14px;
+  padding: 3px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Stamp icon picker grid */
+.stamp-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  flex: 1;
+}
+.stamp-grid button {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 0;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+.stamp-grid button.active {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
 /* Print mode — hide UI, show only the canvas */
 @media print {
   @page { margin: 12mm; }
@@ -795,6 +927,9 @@ html.dark .share-card button:hover { background: rgba(255,255,255,0.06); }
         <button class="tool" id="share-btn" title="Share — get a QR code for another device to join">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         </button>
+        <button class="tool" id="today-btn" title="Insert today's date at the center of the page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="8" y1="18" x2="10" y2="18"/><line x1="14" y1="14" x2="16" y2="14"/></svg>
+        </button>
         <button class="tool" id="export-pdf-btn" title="Export current page as PDF">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
         </button>
@@ -878,6 +1013,9 @@ const TOOLS = [
   { id: 'shape', label: 'Shape', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="1"/></svg>' },
   { id: 'ruler', label: 'Ruler', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.3 8.7 8.7 21.3a2.4 2.4 0 0 1-3.4 0L2.7 18.7a2.4 2.4 0 0 1 0-3.4L15.3 2.7a2.4 2.4 0 0 1 3.4 0l2.6 2.6a2.4 2.4 0 0 1 0 3.4Z"/><path d="m7.5 10.5 2 2"/><path d="m10.5 7.5 2 2"/><path d="m13.5 4.5 2 2"/><path d="m4.5 13.5 2 2"/></svg>' },
   { id: 'text', label: 'Text', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>' },
+  { id: 'sticky', label: 'Sticky note', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11"/><path d="M21 8v6a3 3 0 0 1-3 3h-2a3 3 0 0 0-3 3v2"/><path d="M16 3v5h5"/></svg>' },
+  { id: 'checkbox', label: 'Checkbox / to-do', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="3" y="5" rx="2"/><path d="m7 12 3 3 7-7"/><line x1="20" y1="10" x2="22" y2="10"/><line x1="20" y1="15" x2="22" y2="15"/></svg>' },
+  { id: 'stamp', label: 'Stamp / marker', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8 22 9 17 14 18 21 12 18 6 21 7 14 2 9 9 8 12 2"/></svg>' },
   { id: 'image', label: 'Insert image', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>' },
   { id: 'table', label: 'Insert table', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>' },
   { id: 'hand', label: 'Hand (pan)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>' },
@@ -890,6 +1028,8 @@ const SHAPE_VARIANTS = [
   { id: 'line', label: 'Line' },
   { id: 'arrow', label: 'Arrow' },
 ];
+const STICKY_COLORS = ['#fef08a','#fbcfe8','#bfdbfe','#bbf7d0','#fed7aa'];
+const STAMP_ICONS = ['⭐','✓','✗','‼','?','📌','💡','❤','🔥','🎯','📝','⚠'];
 const PAGE_TEMPLATES = [
   { id: 'blank',     label: 'Blank' },
   { id: 'lined',     label: 'Lined' },
@@ -918,8 +1058,11 @@ const state = {
     highlighter: { color: '#fef08a', width: 18 },
     eraser:      { width: 14 },
     shape:       { variant: 'rect', color: '#111111', width: 2.5 },
+    sticky:      { color: '#fef08a' },
+    stamp:       { icon: '⭐', size: 36 },
   },
   customColors: { pen: '#111111', highlighter: '#fef08a', shape: '#111111' },
+  penPresets: [],
   selectedIds: new Set(),
   history: [],
   redoStack: [],
@@ -940,6 +1083,7 @@ function snapshotState() {
     folders: state.folders, notes: state.notes, pages: state.pages,
     currentNoteId: state.currentNoteId, currentPageId: state.currentPageId,
     customColors: state.customColors,
+    penPresets: state.penPresets,
   };
 }
 function save() {
@@ -976,6 +1120,7 @@ function load() {
     state.currentNoteId = p.currentNoteId;
     state.currentPageId = p.currentPageId;
     if (p.customColors) state.customColors = { ...state.customColors, ...p.customColors };
+    if (Array.isArray(p.penPresets)) state.penPresets = p.penPresets;
     // Migrate: ensure each page has template
     for (const pid in state.pages) {
       if (!state.pages[pid].template) state.pages[pid].template = 'lined';
@@ -1156,6 +1301,7 @@ function render() {
     for (const el of page.elements) {
       if (el.type === 'stroke') drawStrokeTo(ctx, el);
       else if (el.type === 'shape') drawShapeTo(ctx, el);
+      else if (el.type === 'stamp') drawStampTo(ctx, el);
     }
   }
   // Render DOM overlays at appropriate scale
@@ -1327,6 +1473,17 @@ function drawShapeTo(c, el) {
   c.restore();
 }
 
+function drawStampTo(c, el) {
+  c.save();
+  const sz = el.size || 36;
+  c.font = sz + 'px -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Apple Color Emoji", system-ui, sans-serif';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText(el.icon || '⭐', el.x, el.y);
+  if (state.selectedIds.has(el.id)) drawSelectionBoxTo(c, el);
+  c.restore();
+}
+
 function drawSelectionBoxTo(c, el) {
   const bbox = getBBox(el);
   if (!bbox) return;
@@ -1353,8 +1510,12 @@ function getBBox(el) {
   if (el.type === 'shape') {
     return { x: Math.min(el.x, el.x+el.w), y: Math.min(el.y, el.y+el.h), w: Math.abs(el.w), h: Math.abs(el.h) };
   }
-  if (el.type === 'text' || el.type === 'image' || el.type === 'table') {
+  if (el.type === 'text' || el.type === 'image' || el.type === 'table' || el.type === 'checkbox') {
     return { x: el.x, y: el.y, w: el.w || 200, h: el.h || 30 };
+  }
+  if (el.type === 'stamp') {
+    const sz = el.size || 36;
+    return { x: el.x - sz/2, y: el.y - sz/2, w: sz, h: sz };
   }
   return null;
 }
@@ -1433,13 +1594,15 @@ function renderOverlays() {
   for (const el of page.elements) {
     if (el.type === 'text') {
       const div = document.createElement('div');
-      div.className = 'element-overlay text-element' + (state.selectedIds.has(el.id) ? ' selected' : '');
+      const isSticky = el.style === 'sticky';
+      div.className = 'element-overlay text-element' + (isSticky ? ' sticky' : '') + (state.selectedIds.has(el.id) ? ' selected' : '');
       div.dataset.id = el.id;
       div.contentEditable = 'true';
       div.style.left = el.x + 'px';
       div.style.top = el.y + 'px';
       div.style.minWidth = (el.w || 200) + 'px';
       div.style.color = el.color || '#1a1a1a';
+      if (isSticky && el.bgColor) div.style.background = el.bgColor;
       div.textContent = el.content || '';
       div.addEventListener('input', () => { el.content = div.textContent; save(); });
       div.addEventListener('blur', () => {
@@ -1448,6 +1611,37 @@ function renderOverlays() {
           render(); save();
         }
       });
+      attachOverlayDrag(div, el);
+      overlaysContainer.appendChild(div);
+    } else if (el.type === 'checkbox') {
+      const div = document.createElement('div');
+      div.className = 'element-overlay checkbox-element' + (el.checked ? ' checked' : '') + (state.selectedIds.has(el.id) ? ' selected' : '');
+      div.dataset.id = el.id;
+      div.style.left = el.x + 'px';
+      div.style.top = el.y + 'px';
+      div.style.minWidth = (el.w || 220) + 'px';
+      const box = document.createElement('span');
+      box.className = 'cb-box';
+      box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      box.addEventListener('pointerdown', (ev) => {
+        ev.stopPropagation();
+        snapshot();
+        el.checked = !el.checked;
+        render(); save();
+      });
+      const label = document.createElement('span');
+      label.className = 'cb-label';
+      label.contentEditable = 'true';
+      label.textContent = el.content || '';
+      label.addEventListener('input', () => { el.content = label.textContent; save(); });
+      label.addEventListener('blur', () => {
+        if ((!el.content || !el.content.trim()) && !el.checked) {
+          page.elements = page.elements.filter(e => e.id !== el.id);
+          render(); save();
+        }
+      });
+      div.appendChild(box);
+      div.appendChild(label);
       attachOverlayDrag(div, el);
       overlaysContainer.appendChild(div);
     } else if (el.type === 'image') {
@@ -1913,6 +2107,72 @@ const tools = {
       render();
     },
     up() { panState = null; save(); },
+  },
+
+  sticky: {
+    down(e) {
+      const pos = getCanvasPoint(e);
+      snapshot();
+      const el = {
+        id: uid(), type: 'text', style: 'sticky',
+        x: pos.x, y: pos.y, w: 180,
+        color: '#1a1a1a',
+        bgColor: state.toolSettings.sticky.color,
+        content: '',
+      };
+      currentPage().elements.push(el);
+      save();
+      setTool('lasso');
+      state.selectedIds.clear();
+      state.selectedIds.add(el.id);
+      render();
+      setTimeout(() => {
+        const node = overlaysContainer.querySelector(`[data-id="${el.id}"]`);
+        if (node) { node.focus(); placeCaretAtEnd(node); }
+      }, 30);
+    },
+    move() {}, up() {},
+  },
+
+  checkbox: {
+    down(e) {
+      const pos = getCanvasPoint(e);
+      snapshot();
+      const el = {
+        id: uid(), type: 'checkbox',
+        x: pos.x, y: pos.y, w: 240, h: 32,
+        checked: false,
+        content: '',
+      };
+      currentPage().elements.push(el);
+      save();
+      setTool('lasso');
+      state.selectedIds.clear();
+      state.selectedIds.add(el.id);
+      render();
+      setTimeout(() => {
+        const node = overlaysContainer.querySelector(`[data-id="${el.id}"] .cb-label`);
+        if (node) { node.focus(); placeCaretAtEnd(node); }
+      }, 30);
+    },
+    move() {}, up() {},
+  },
+
+  stamp: {
+    down(e) {
+      const pos = getCanvasPoint(e);
+      const s = state.toolSettings.stamp;
+      snapshot();
+      const el = {
+        id: uid(), type: 'stamp',
+        x: pos.x, y: pos.y,
+        icon: s.icon || '⭐',
+        size: s.size || 36,
+      };
+      currentPage().elements.push(el);
+      render(); save();
+    },
+    move() {}, up() {},
   },
 };
 
@@ -2391,6 +2651,7 @@ function renderInspector() {
     const s = state.toolSettings.pen;
     inspector.appendChild(makeColorPicker(PRESET_COLORS, s.color, 'pen', (c) => { s.color = c; renderInspector(); }));
     inspector.appendChild(makeSizeSlider(0.5, 12, 0.5, s.width, (w) => { s.width = w; }, s.color));
+    inspector.appendChild(makePenPresetsSection());
   } else if (tool === 'highlighter') {
     const s = state.toolSettings.highlighter;
     inspector.appendChild(makeColorPicker(HIGHLIGHTER_COLORS, s.color, 'highlighter', (c) => { s.color = c; renderInspector(); }));
@@ -2436,6 +2697,47 @@ function renderInspector() {
   } else if (tool === 'text') {
     const h = document.createElement('div'); h.className = 'hint';
     h.textContent = 'Tap on the canvas to add a text block.';
+    inspector.appendChild(h);
+  } else if (tool === 'sticky') {
+    const s = state.toolSettings.sticky;
+    const sec = document.createElement('div');
+    sec.className = 'inspector-section';
+    const lbl = document.createElement('span'); lbl.className = 'inspector-label'; lbl.textContent = 'Color';
+    const wrap = document.createElement('div'); wrap.className = 'color-swatches';
+    for (const c of STICKY_COLORS) {
+      const sw = document.createElement('button');
+      sw.className = 'color-swatch' + (c === s.color ? ' active' : '');
+      sw.style.background = c;
+      sw.addEventListener('click', () => { s.color = c; renderInspector(); });
+      wrap.appendChild(sw);
+    }
+    sec.appendChild(lbl); sec.appendChild(wrap);
+    inspector.appendChild(sec);
+    const h = document.createElement('div'); h.className = 'hint';
+    h.textContent = 'Tap on the canvas to drop a sticky note.';
+    inspector.appendChild(h);
+  } else if (tool === 'checkbox') {
+    const h = document.createElement('div'); h.className = 'hint';
+    h.innerHTML = 'Tap to place a to-do checkbox. Click the box later to toggle done.';
+    inspector.appendChild(h);
+  } else if (tool === 'stamp') {
+    const s = state.toolSettings.stamp;
+    const sec = document.createElement('div');
+    sec.className = 'inspector-section';
+    const lbl = document.createElement('span'); lbl.className = 'inspector-label'; lbl.textContent = 'Icon';
+    const grid = document.createElement('div'); grid.className = 'stamp-grid';
+    for (const ic of STAMP_ICONS) {
+      const b = document.createElement('button');
+      b.className = (ic === s.icon) ? 'active' : '';
+      b.textContent = ic;
+      b.addEventListener('click', () => { s.icon = ic; renderInspector(); });
+      grid.appendChild(b);
+    }
+    sec.appendChild(lbl); sec.appendChild(grid);
+    inspector.appendChild(sec);
+    inspector.appendChild(makeSizeSlider(16, 80, 2, s.size, (w) => { s.size = w; }, '#888'));
+    const h = document.createElement('div'); h.className = 'hint';
+    h.textContent = 'Tap on the canvas to stamp the selected icon.';
     inspector.appendChild(h);
   } else if (tool === 'table') {
     const h = document.createElement('div'); h.className = 'hint';
@@ -2515,6 +2817,54 @@ function makeSizeSlider(min, max, step, value, onInput, previewColor) {
     onInput(v);
   });
   wrap.appendChild(preview); wrap.appendChild(slider); wrap.appendChild(val);
+  sec.appendChild(lbl); sec.appendChild(wrap);
+  return sec;
+}
+
+function makePenPresetsSection() {
+  const sec = document.createElement('div');
+  sec.className = 'inspector-section';
+  const lbl = document.createElement('span');
+  lbl.className = 'inspector-label';
+  lbl.textContent = 'Presets';
+  const wrap = document.createElement('div');
+  wrap.className = 'pen-presets';
+
+  for (const p of state.penPresets) {
+    const chip = document.createElement('button');
+    chip.className = 'pen-preset';
+    chip.title = `${p.name} · width ${p.width}`;
+    const sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = p.color;
+    const lab = document.createElement('span'); lab.textContent = p.name;
+    const del = document.createElement('span'); del.className = 'del-x'; del.textContent = '×'; del.title = 'Remove preset';
+    chip.appendChild(sw); chip.appendChild(lab); chip.appendChild(del);
+    chip.addEventListener('click', (ev) => {
+      if (ev.target === del) {
+        ev.stopPropagation();
+        state.penPresets = state.penPresets.filter(x => x.id !== p.id);
+        save(); renderInspector();
+        return;
+      }
+      state.toolSettings.pen.color = p.color;
+      state.toolSettings.pen.width = p.width;
+      renderInspector();
+    });
+    wrap.appendChild(chip);
+  }
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'preset-save-btn';
+  saveBtn.textContent = '+ Save current';
+  saveBtn.title = 'Save the current pen color + width as a preset';
+  saveBtn.addEventListener('click', () => {
+    const s = state.toolSettings.pen;
+    const name = `${s.color}·${s.width}`;
+    if (state.penPresets.some(p => p.color === s.color && p.width === s.width)) return;
+    state.penPresets.push({ id: uid(), name, color: s.color, width: s.width });
+    save(); renderInspector();
+  });
+  wrap.appendChild(saveBtn);
+
   sec.appendChild(lbl); sec.appendChild(wrap);
   return sec;
 }
@@ -2721,6 +3071,7 @@ function applyRemoteState() {
     if (parsed.notes)   state.notes = parsed.notes;
     if (parsed.pages)   state.pages = parsed.pages;
     if (parsed.customColors) state.customColors = parsed.customColors;
+    if (Array.isArray(parsed.penPresets)) state.penPresets = parsed.penPresets;
     if (parsed.currentNoteId && state.notes[parsed.currentNoteId]) {
       state.currentNoteId = parsed.currentNoteId;
     } else if (!state.notes[state.currentNoteId]) {
@@ -2880,6 +3231,32 @@ if (window.QuillSync) {
 }
 
 // ============================================================
+// Date stamp — "Today" button drops a styled text element with current date
+// ============================================================
+function formatDateStamp(d) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+function insertDateStamp() {
+  const view = state.view;
+  const cx = (canvas.clientWidth / 2 - view.x) / view.scale;
+  const cy = (canvas.clientHeight / 2 - view.y) / view.scale;
+  snapshot();
+  const el = {
+    id: uid(), type: 'text',
+    style: 'sticky',
+    x: cx - 90, y: cy - 18, w: 200,
+    color: '#5b4a1f',
+    bgColor: '#fef3c7',
+    content: formatDateStamp(new Date()),
+  };
+  currentPage().elements.push(el);
+  render(); save();
+  flashStatus('Date inserted');
+}
+
+// ============================================================
 // Theme (light / dark)
 // ============================================================
 const THEME_KEY = 'quill-theme';
@@ -3032,6 +3409,9 @@ function closeShareModal() {
 
   const exportBtn = document.getElementById('export-pdf-btn');
   if (exportBtn) exportBtn.addEventListener('click', exportToPdf);
+
+  const todayBtn = document.getElementById('today-btn');
+  if (todayBtn) todayBtn.addEventListener('click', insertDateStamp);
 
   const themeBtn = document.getElementById('theme-toggle');
   if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
